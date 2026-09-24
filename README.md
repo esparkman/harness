@@ -93,6 +93,24 @@ HARNESS CHECK (SessionStart hook — environment-verified, not model memory):
 - **[docs/agents.md](docs/agents.md)** — bring-your-own agents: adding, overriding, authoring, the rails-agents example.
 - **[docs/troubleshooting.md](docs/troubleshooting.md)** — FAQ and fixes.
 
+## Maintaining / releasing
+
+The harness ships onto other people's machines, so shipped content must never carry an author-local
+path (a personal vault, a real `/Users/<name>` home, a `~/Development` bundle). Before tagging a release:
+
+```sh
+bash tools/check_shipped_paths.sh   # exits non-zero on any author-local path in tracked files
+```
+
+It scans every tracked file and fails on a personal note-vault path, a `~/Development` bundle path, or
+a real per-user home directory (a documented `/Users/you`-style placeholder is allowed, as is any line
+carrying a `shipped-path-ok` sentinel). Wire it as a pre-push guard if you want it enforced automatically:
+
+```sh
+printf '#!/bin/sh\nexec bash tools/check_shipped_paths.sh\n' > .git/hooks/pre-push
+chmod +x .git/hooks/pre-push
+```
+
 ## Requirements
 
 Claude Code, plus `bash`, `git`, `jq`, and `python3`. (`ruby` if you use the story-writer's DoR lint.)
