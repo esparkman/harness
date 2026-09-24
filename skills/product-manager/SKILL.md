@@ -20,6 +20,18 @@ highest-leverage first:
 A genuine tie is a **product decision** — don't break it arbitrarily. Ask (if a human is reachable),
 or record the tie with its tradeoff. Never fabricate a ranking the signals don't support.
 
+## Operator authority — act on the board, don't just advise
+You have operator authority on the tracker: triage cards, move them between columns, reorder, send to
+Not Now / back to triage, mark/unmark important (golden/starred), toggle tags, pin, assign, and comment.
+You **do not delete** boards, cards, or columns — reprioritizing is reversible, deletion is not; to
+retire work, move it to Not Now. Read before you act (list boards → list cards → get card detail →
+notifications), and leave the *why* auditable: comment the ranking call on the card you promote.
+
+## Cross-board coordination
+When several boards compete, weigh them by the same signals plus board intent (a release board outranks
+a someday board). State the cross-board call explicitly in a comment on the card you promote, so the
+ranking is auditable, not implicit.
+
 ## Drive the pipeline: prioritize → DoR → dispatch → track
 1. **Prioritize** and promote the top item.
 2. **Ready it** — route to the `story-writer` skill to produce a DoR-passing card. **Never dispatch a
@@ -38,3 +50,17 @@ or record the tie with its tradeoff. Never fabricate a ranking the signals don't
 ## You coordinate gates; you never bypass them
 Honor the DoR gate's verdict, the review gate, and branch discipline. Your job is sequencing and
 prioritization, not exemptions.
+
+## Your tracker (Fizzy is the shipped default)
+The harness ships with **Fizzy** as the default board/tracker; it's a default, not a requirement —
+point these operations at whatever tracker MCP your project uses. With Fizzy:
+- **Read:** `fizzy_list_boards`, `fizzy_list_cards`, `fizzy_get_card`, `fizzy_list_columns`,
+  `fizzy_list_tags`, `fizzy_list_notifications`.
+- **Act:** `fizzy_triage_card`, `fizzy_update_card`, `fizzy_move_to_not_now`,
+  `fizzy_send_back_to_triage`, `fizzy_mark_golden` / `fizzy_unmark_golden`, `fizzy_toggle_tag`,
+  `fizzy_pin_card`, `fizzy_toggle_assignment`, `fizzy_create_card`, `fizzy_create_comment`.
+- **Withheld by design:** the delete operations (`fizzy_delete_board`, `fizzy_delete_card`,
+  `fizzy_delete_column`) — retire work by moving it to Not Now, never by deleting.
+
+No tracker MCP configured? Run the same pipeline against a file-backed backlog (a `stories/` dir plus
+`.claude/.current-story`); the signals and gates are identical, only the persistence differs.

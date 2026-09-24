@@ -62,7 +62,13 @@ only when the lint exits 0.
 ### `product-manager`
 Prioritizes from real signals (never invented) and drives the pipeline: prioritize → ready (via
 story-writer) → record `.claude/.current-story` (which unlocks the pipeline gate) → route to an
-engineer (BYO agent) → track. Coordinates gates; never bypasses them.
+engineer (BYO agent) → track. Coordinates gates; never bypasses them. Acts on the board with operator
+authority (triage, move, tag, pin, assign, comment — never delete).
+
+**Tracker:** the harness ships with **Fizzy** as the default board MCP (both skills use
+`fizzy_*` read/act tools, with the delete operations withheld by design). It's a default, not a
+requirement — point the operations at whatever tracker MCP your project uses, or run the pipeline
+against a file-backed backlog (`stories/` + `.claude/.current-story`) with no tracker at all.
 
 ## How they fit together
 
