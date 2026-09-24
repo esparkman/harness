@@ -59,6 +59,29 @@ Guidance:
   each agent — the guardrails skill and the gates handle that globally. Keep agents focused on their
   domain.
 
+## Ground-truth tooling & the two "bookshelves"
+
+Agents do better work grounded in truth than in memory. Two complementary, **stack-declared**
+mechanisms — both wired by the installer, neither hard-coded to a `$HOME` path:
+
+1. **A ground-truth MCP server** (what the app *is* — schema/routes/live code). A stack profile's
+   `mcp` block is written to a committed `.mcp.json`. The rails preset ships
+   `rails: bundle exec rails-mcp-server` (add the `rails-mcp-server` gem to your Gemfile dev group so
+   `bundle exec` resolves). Instruct your agents to query it before inferring structure from partial reads.
+
+2. **Guide/reference bookshelves** (the *how/why*):
+   - **MCP guide resources** — framework docs the server's `load_guide` reads. A stack's `mcp_guides`
+     block lists the libraries (rails → rails/turbo/stimulus/kamal). These are a **machine-level,
+     one-time download**: the installer checks `~/.config/rails-mcp/resources/` and nudges you to run
+     `rails-mcp-server-download-resources <lib>` for any missing ones (or `--mcp-download` to fetch them).
+   - **The EPUB bookshelf** — the `bookshelf` skill (`${CLAUDE_PLUGIN_ROOT}/tools/tome.sh`) reads your
+     own reference books (never shipped — copyright). Point it at your shelf with **`TOMES_DIR`**, set
+     once per machine/profile in your config home's `env` block (the installer's user step can write it).
+     Agents quote the source line they rely on.
+
+> These are *distinct*: the MCP server + guides cover the framework's current surface; the EPUB shelf
+> covers deeper design/idiom references. Both are optional and BYO-populated.
+
 ## The delegation map
 
 Where you enforce "always delegate to an agent," put it in your global ruleset

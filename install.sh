@@ -19,6 +19,8 @@
 #   --no-plugin         don't touch settings — only write .claude/harness.json
 #   --ref REF           pin the marketplace to this git tag/branch (default: v<plugin.json version>)
 #   --no-mcp            don't write .mcp.json even if the stack declares MCP servers
+#   --mcp-download      download any missing MCP guide resources (default: just nudge)
+#   --tomes-dir PATH    set env.TOMES_DIR (EPUB bookshelf) in your config home
 #   --global            also install the generic global-CLAUDE.md into your config home
 #   --yes               accept defaults, no prompts
 set -euo pipefail
@@ -28,7 +30,7 @@ MKT_NAME="harness"; MKT_REPO="esparkman/harness"   # this repo, self-referencing
 ALL_COMPONENTS=(session_banner verification_gate pipeline_gate)
 
 # --- args ---
-TARGET=""; STACK=""; COMPONENTS=""; SCOPE="project"; DO_PLUGIN=1; DO_GLOBAL=""; ASSUME_YES=""; PIN_REF=""; DO_MCP=1
+TARGET=""; STACK=""; COMPONENTS=""; SCOPE="project"; DO_PLUGIN=1; DO_GLOBAL=""; ASSUME_YES=""; PIN_REF=""; DO_MCP=1; DO_MCP_DOWNLOAD=0; TOMES_VAL=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --stack) STACK="$2"; shift 2;;
@@ -37,6 +39,8 @@ while [ "$#" -gt 0 ]; do
     --no-plugin) DO_PLUGIN=0; shift;;
     --ref) PIN_REF="$2"; shift 2;;
     --no-mcp) DO_MCP=0; shift;;
+    --mcp-download) DO_MCP_DOWNLOAD=1; shift;;
+    --tomes-dir) TOMES_VAL="$2"; shift 2;;
     --global) DO_GLOBAL=1; shift;;
     --yes|-y) ASSUME_YES=1; shift;;
     -h|--help) sed -n '2,32p' "$0"; exit 0;;
@@ -148,6 +152,29 @@ elif [ -n "$mcp" ]; then
   echo "  (skipped MCP wiring per --no-mcp; stack declares: $(printf '%s' "$mcp" | jq -r 'keys|join(", ")'))"
 fi
 
+# --- 4c. MCP guide resources (machine-level, shared across repos): check + nudge, or download ---
+guides="$(printf '%s' "$STACK_JSON" | jq -c '.mcp_guides // empty')"
+if [ -n "$guides" ] && [ "$DO_MCP" = 1 ]; then
+  rdir="$HOME/$(printf '%s' "$guides" | jq -r '.resources_dir')"
+  dl="$(printf '%s' "$guides" | jq -r '.download_cmd')"
+  missing=()
+  while IFS= read -r lib; do
+    [ -n "$lib" ] || continue
+    [ -d "$rdir/$lib" ] || missing+=("$lib")
+  done < <(printf '%s' "$guides" | jq -r '.libs[]?')
+  if [ "${#missing[@]}" -eq 0 ]; then
+    echo "  mcp guides: all present in $rdir"
+  elif [ "$DO_MCP_DOWNLOAD" = 1 ]; then
+    if command -v "$dl" >/dev/null 2>&1; then
+      for lib in "${missing[@]}"; do echo "  downloading guide resource: $lib"; "$dl" "$lib" >/dev/null 2>&1 || echo "    (failed: $lib)"; done
+    else
+      echo "  mcp guides: '$dl' not on PATH — install the MCP server, then: $dl ${missing[*]}"
+    fi
+  else
+    echo "  mcp guides MISSING (${missing[*]}) — one-time per machine, run:  $dl ${missing[*]}   (or re-run install with --mcp-download)"
+  fi
+fi
+
 # --- 5. optional generic global ruleset ---
 if [ -z "$DO_GLOBAL" ] && [ -z "$ASSUME_YES" ]; then yesno "Install the generic global-CLAUDE.md into your config home?" n && DO_GLOBAL=1; fi
 if [ -n "$DO_GLOBAL" ]; then
@@ -160,6 +187,23 @@ if [ -n "$DO_GLOBAL" ]; then
   fi
 fi
 
+# --- 6. TOMES_DIR for the bookshelf skill (per-machine/profile; written to the config home's env) ---
+if [ -z "$TOMES_VAL" ] && [ -z "$ASSUME_YES" ]; then
+  TOMES_VAL="$(ask 'Path(s) to your EPUB reference shelf for the bookshelf skill (colon-separated, blank to skip): ' '')"
+fi
+if [ -n "$TOMES_VAL" ]; then
+  cfg="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; mkdir -p "$cfg"
+  python3 - "$cfg/settings.json" "$TOMES_VAL" <<'PY'
+import json, os, sys
+p, val = sys.argv[1], sys.argv[2]
+s = json.load(open(p)) if os.path.exists(p) and os.path.getsize(p) > 0 else {}
+s.setdefault("env", {})["TOMES_DIR"] = val
+with open(p, "w") as f:
+    json.dump(s, f, indent=2); f.write("\n")
+print(f"  set env.TOMES_DIR in {p}")
+PY
+fi
+
 # --- summary ---
 active="$(printf '%s' "$COMPS_JSON" | jq -r 'to_entries|map(select(.value))|map(.key)|join(", ")')"
 cat <<EOF
@@ -170,7 +214,8 @@ cat <<EOF
   plugin      : $([ "$DO_PLUGIN" = 1 ] && echo "enabled ($SCOPE scope, marketplace pinned ${PIN_REF:-UNPINNED})" || echo "not enabled")
   mcp         : $( [ -n "$(printf '%s' "$STACK_JSON" | jq -c '.mcp // empty')" ] && { [ "$DO_MCP" = 1 ] && echo ".mcp.json written ($(printf '%s' "$STACK_JSON" | jq -r '.mcp|keys|join(", ")'))" || echo "skipped (--no-mcp)"; } || echo "none for this stack")
   agents      : Bring-Your-Own — put your agents in .claude/agents/ (none shipped)
-  skills      : guardrails, story-writer, product-manager come with the plugin
+  skills      : guardrails, story-writer, product-manager, bookshelf come with the plugin
+  bookshelf   : $( [ -n "${TOMES_VAL:-}" ] && echo "TOMES_DIR set in config home" || echo "set TOMES_DIR (env) to use the EPUB bookshelf — see docs/agents.md" )
 
 Next: restart Claude Code (or /config) so it picks up the plugin, then open a session —
 the SessionStart banner reports the harness state. Gates run in WARN mode; promote with

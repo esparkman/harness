@@ -7,5 +7,10 @@
   "test_command": "bin/rails test",
   "mcp": {
     "rails": { "command": "bundle", "args": ["exec", "rails-mcp-server", "--mode", "stdio"] }
+  },
+  "mcp_guides": {
+    "resources_dir": ".config/rails-mcp/resources",
+    "download_cmd": "rails-mcp-server-download-resources",
+    "libs": ["rails", "turbo", "stimulus", "kamal"]
   }
 }
