@@ -10,7 +10,7 @@ Cite IDs as you go; the ESCALATION LADDER below is mandatory, not optional.
 - D5. Never re-run a failing command unchanged. Before any re-run, state one line: the hypothesis and what changed since the last run. Suspected flake? Run the test 3x in isolation, paste all 3 outcomes; 3/3 pass -> log `FLAKE: 3/3 pass isolated`; any failure -> the bug is real.
 - D6. Failed-attempts ledger: after EVERY failed fix, BEFORE trying again, record `ATTEMPT n [L<level>]: <what changed> -> <exact observed failure>`. A next attempt differing from a logged one only in surface details is FORBIDDEN -> move up the ESCALATION LADDER.
 - D7. Same tool call failed twice with the same error? A third unchanged (or cosmetically varied) attempt is forbidden -> quote the error verbatim, state in one sentence what it implies, then change something structural: different tool, different path, read the config, or ask.
-- D8. Fix landed? Two runs, both pasted: (1) the D1 re-run — original command, unmodified — passing; (2) the nearest enclosing suite green (summary line). Then run the fix-shaped-to-test check (`~/Documents/Obsidian Vault/Claude Code/guardrails/VERIFY.md`, "A test you just made pass shares literals with your fix").
+- D8. Fix landed? Two runs, both pasted: (1) the D1 re-run — original command, unmodified — passing; (2) the nearest enclosing suite green (summary line). Then run the fix-shaped-to-test check (`${CLAUDE_PLUGIN_ROOT}/skills/guardrails/references/VERIFY.md`, "A test you just made pass shares literals with your fix").
 - D9. Result contradicts your prediction — either direction? Do not rationalize it. Prove the executed code is the edited code (temporary marker log line, or printed file path + mtime) and re-run with caches cleared (e.g. `jest --no-cache`, framework tmp/cache clear, a clean build). Only then interpret.
 - D10. About to weaken a failing check to get green? That is your global Code Review Gate / Hard-stop territory: quote the failure, propose the change, wait for approval. No skips, deleted tests, loosened asserts, raised tolerances, widened catch/`rescue`, lint-disable comments (e.g. `// eslint-disable`, `# rubocop:disable`) without justification.
 
@@ -39,7 +39,7 @@ The ATTEMPT count sets a floor that never moves down for the same bug.
 | "the linter/type error is noise" | Paste the exact message; explain it in one line or fix it |
 
 ## Same error, byte-identical, after your fix
-Your code is not running. Verify you edited the file the process actually loads: restart the server/watcher/any preloader, rebuild assets, check for a twin file (`~/Documents/Obsidian Vault/Claude Code/guardrails/CODE.md` C3), confirm the edit landed (`git diff -- <file>`).
+Your code is not running. Verify you edited the file the process actually loads: restart the server/watcher/any preloader, rebuild assets, check for a twin file (`${CLAUDE_PLUGIN_ROOT}/skills/guardrails/references/CODE.md` C3), confirm the edit landed (`git diff -- <file>`).
 
 ## A previously-passing test fails after your edit
 BEFORE touching the test, state in one line whether the behavior change is intended by the task. Only if intended: edit the expectation, quote old-expected vs new-expected with justification. Never run snapshot-update as a first response — it converts a caught regression into a certified one.
