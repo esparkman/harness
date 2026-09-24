@@ -1,0 +1,9 @@
+# macOS / editor
+.DS_Store
+.vscode/
+.idea/
+*.bak
+*~
+
+# Local test scratch (isolated install/config used to smoke-test the harness)
+/.test-projects/

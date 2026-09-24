@@ -1,0 +1,12 @@
+{
+  "name": "harness",
+  "description": "The engineering-harness marketplace: a stack-agnostic Claude Code harness (enforcement hooks, guardrail playbooks, PM delivery pipeline) you install and tailor. Bring your own agents.",
+  "owner": { "name": "esparkman", "url": "https://github.com/esparkman" },
+  "plugins": [
+    {
+      "name": "harness",
+      "source": "./",
+      "description": "Stack-agnostic engineering harness — enforcement hooks, guardrails, PM pipeline. Config-driven per stack; BYO agents."
+    }
+  ]
+}

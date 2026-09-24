@@ -1,0 +1,8 @@
+{
+  "name": "generic",
+  "impl_dirs": ["src", "lib"],
+  "ui_dirs": [],
+  "test_dir": "test",
+  "operator_test_dir": "",
+  "test_command": ""
+}

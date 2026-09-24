@@ -1,0 +1,8 @@
+{
+  "name": "node",
+  "impl_dirs": ["src", "lib", "app"],
+  "ui_dirs": ["src/components", "src/pages", "app"],
+  "test_dir": "test",
+  "operator_test_dir": "e2e",
+  "test_command": "npm test"
+}
