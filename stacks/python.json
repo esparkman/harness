@@ -1,0 +1,8 @@
+{
+  "name": "python",
+  "impl_dirs": ["src", "app"],
+  "ui_dirs": ["app/templates", "app/views"],
+  "test_dir": "tests",
+  "operator_test_dir": "tests/e2e",
+  "test_command": "pytest"
+}
