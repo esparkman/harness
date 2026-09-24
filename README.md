@@ -1,52 +1,102 @@
 # harness
 
-A **stack-agnostic engineering harness for Claude Code**. It ships the *mechanism* —
-enforcement hooks, guardrail playbooks, and a PM delivery pipeline — and you **bring your own
-agents**. Rails, Rust, Python, Go, anything: the harness reads a small per-project **stack
-profile** so nothing is hardcoded to one framework.
+**A stack-agnostic engineering harness for Claude Code.** It turns Claude Code into a disciplined
+teammate — enforcement hooks, guardrail playbooks, and a product-management delivery pipeline —
+and it works for *any* stack because it's driven by a small per-project config. You **bring your
+own agents**; the harness supplies the mechanism.
 
-> Status: early. Phase 1 = the plugin scaffold + config-driven hooks. Guardrails, PM pipeline,
-> and the interactive installer land in later phases. See the spec in the project vault.
+```sh
+git clone https://github.com/esparkman/harness ~/harness
+~/harness/install.sh /path/to/your/project      # interactive: pick your stack + components
+```
 
-## What it is
-- **Hooks (plugin):** a SessionStart status banner, a Stop verification gate, and a PreToolUse
-  pipeline gate — all portable via `${CLAUDE_PLUGIN_ROOT}` and driven by your stack profile.
-- **Config-driven:** each project has `.claude/harness.json` declaring which components are active
-  and the stack's conventions (implementation dirs, test dir, operator-test dir, test command).
-  With no config, the enforcing gates stay inert.
-- **BYO agents:** the harness ships **zero** stack agents. Put your own in `.claude/agents/`.
-  (`esparkman/rails-agents` is one example Rails agent bundle.)
+That's it. Restart Claude Code in your project and the harness is live.
 
-## The stack profile (`.claude/harness.json`)
-Written by the installer; a preset from `stacks/` merged with your component choices:
-```json
+---
+
+## Why this exists
+
+Left alone, an AI coding agent forgets the rules it was told, claims "done" without running
+anything, edits the wrong file, and drifts from your conventions. A **harness** is the scaffolding
+that holds it to a standard:
+
+- a **SessionStart banner** that reports *environment-verified* state (not the model's memory),
+- a **verification gate** that won't let a turn end claiming success without evidence,
+- a **pipeline gate** that keeps feature work flowing through a Definition-of-Ready story,
+- **guardrails** — short checklists the model reads at the exact moment a known mistake is about
+  to happen,
+- a **PM pipeline** (story-writer → DoR gate → product-manager) so work is ready before it's built.
+
+Most harnesses are welded to one framework. This one isn't: every stack-specific detail lives in a
+**stack profile** you pick at install time, so the same hooks work for Rails, Node, Python, Go, or
+anything you describe.
+
+## The mental model: mechanism vs. payload
+
+| | Where it lives | You get it by |
+|---|---|---|
+| **Mechanism** — hooks, guardrails, PM pipeline | this repo (a Claude Code **plugin**) | `install.sh` / `/plugin` |
+| **Stack profile** — impl dirs, test dir, test command | `.claude/harness.json` in your project | `install.sh` writes it |
+| **Agents** — your specialists | your project's `.claude/agents/` (**BYO**) | you drop them in |
+
+The harness ships **zero agents**. Bring your own — or use an example bundle like
+[esparkman/rails-agents](https://github.com/esparkman/rails-agents) for Rails.
+
+## What's inside
+
+- **Hooks** (`hooks/`) — `session_start_banner`, `verification_gate`, `pipeline_gate`. Portable
+  (`${CLAUDE_PLUGIN_ROOT}`), config-driven, and **inert until you configure them**.
+- **Skills** (`skills/`) — `guardrails` (6 playbooks: CODE, DEBUG, VERIFY, TRAPS, RUNTIME,
+  MECHANISM), `story-writer`, `product-manager`. Model-invoked, stack-agnostic.
+- **Stacks** (`stacks/`) — presets: `rails`, `node`, `python`, `go`, `generic` (+ custom).
+- **Installer** (`install.sh`) — interactive or flag-driven.
+- **Template** (`templates/global-CLAUDE.md`) — a generic starter ruleset for your config home.
+
+## 60-second tour of a configured project
+
+After `install.sh`, your project has:
+
+```jsonc
+// .claude/harness.json   (committed — your team shares it)
 {
-  "components": { "session_banner": true, "verification_gate": true, "pipeline_gate": false },
+  "components": { "session_banner": true, "verification_gate": true, "pipeline_gate": true },
   "stack": {
     "name": "rails",
     "impl_dirs": ["app", "lib", "db/migrate"],
     "ui_dirs": ["app/views", "app/controllers"],
-    "test_dir": "test",
-    "operator_test_dir": "test/system",
+    "test_dir": "test", "operator_test_dir": "test/system",
     "test_command": "bin/rails test"
   }
 }
 ```
-Presets ship in [`stacks/`](stacks/): `rails`, `node`, `generic` (more to come). Pick one or go custom.
-
-## Install (interim — full interactive installer is Phase 3)
-```sh
-/plugin marketplace add esparkman/harness
-/plugin install harness@harness
-# then create .claude/harness.json in your project (copy a stacks/ preset under a "stack" key
-# and add a "components" block).
+```jsonc
+// .claude/settings.json   (committed — safe: references the versioned plugin, not a $HOME script)
+{ "extraKnownMarketplaces": { "harness": { "source": { "source": "github", "repo": "esparkman/harness" } } },
+  "enabledPlugins": { "harness@harness": true } }
 ```
 
-## Components
-| Component | Hook | Does |
-|---|---|---|
-| `session_banner` | SessionStart | Environment-verified status banner (config home, harness config, BYO agent count). |
-| `verification_gate` | Stop | Warns when implementation/UI changed without an operator-journey test or a recorded review. |
-| `pipeline_gate` | PreToolUse | Warns/blocks edits to the implementation surface without a DoR-passing story (or a declared small-fix). |
+Open a session and the banner reports it:
 
-Each is opt-in via `components` in `.claude/harness.json`.
+```
+HARNESS CHECK (SessionStart hook — environment-verified, not model memory):
+  global CLAUDE.md : present (72 lines)
+  harness          : configured (stack: rails; active: session_banner, verification_gate, pipeline_gate)
+  agents (BYO)     : 21 agent(s)
+```
+
+## Documentation
+
+- **[docs/concepts.md](docs/concepts.md)** — the architecture, the plugin+config split, the security model.
+- **[docs/install.md](docs/install.md)** — install in depth: interactive, flags, scopes, CI, updating, uninstalling.
+- **[docs/configuration.md](docs/configuration.md)** — `.claude/harness.json`, components, stack profiles (presets + custom).
+- **[docs/components.md](docs/components.md)** — the three hooks and three skills, in detail; warn → block.
+- **[docs/agents.md](docs/agents.md)** — bring-your-own agents: adding, overriding, authoring, the rails-agents example.
+- **[docs/troubleshooting.md](docs/troubleshooting.md)** — FAQ and fixes.
+
+## Requirements
+
+Claude Code, plus `bash`, `git`, `jq`, and `python3`. (`ruby` if you use the story-writer's DoR lint.)
+
+## License
+
+MIT.
