@@ -1,7 +1,7 @@
 # Global Development Rules (harness starter template)
 
 A generic, stack-agnostic ruleset for use with the **harness** plugin
-(github.com/esparkman/harness). Copy this to your active config home
+(github.com/octanelabsdev/harness). Copy this to your active config home
 (`~/.claude/CLAUDE.md`, or wherever `CLAUDE_CONFIG_DIR` points) and tailor the
 `TODO` sections. It ships nothing personal — it's a starting point.
 

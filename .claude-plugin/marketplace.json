@@ -1,7 +1,7 @@
 {
   "name": "harness",
   "description": "The engineering-harness marketplace: a stack-agnostic Claude Code harness (enforcement hooks, guardrail playbooks, PM delivery pipeline) you install and tailor. Bring your own agents.",
-  "owner": { "name": "esparkman", "url": "https://github.com/esparkman" },
+  "owner": { "name": "Octane Labs", "url": "https://github.com/octanelabsdev" },
   "plugins": [
     {
       "name": "harness",

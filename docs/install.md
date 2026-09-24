@@ -3,7 +3,7 @@
 ## TL;DR
 
 ```sh
-git clone https://github.com/esparkman/harness ~/harness
+git clone https://github.com/octanelabsdev/harness ~/harness
 ~/harness/install.sh /path/to/your/project        # interactive
 ```
 
@@ -67,7 +67,7 @@ shares the same stack profile and component choices.
 
 The installer is a convenience. You can also do it natively:
 ```sh
-/plugin marketplace add esparkman/harness
+/plugin marketplace add octanelabsdev/harness
 /plugin install harness@harness
 ```
 …then create `.claude/harness.json` yourself (copy a preset from `stacks/` under a `"stack"` key and

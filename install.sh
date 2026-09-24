@@ -26,7 +26,7 @@
 set -euo pipefail
 
 BUNDLE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MKT_NAME="harness"; MKT_REPO="esparkman/harness"   # this repo, self-referencing marketplace
+MKT_NAME="harness"; MKT_REPO="octanelabsdev/harness"   # this repo, self-referencing marketplace
 ALL_COMPONENTS=(session_banner verification_gate pipeline_gate)
 
 # --- args ---

@@ -6,7 +6,7 @@ and it works for *any* stack because it's driven by a small per-project config. 
 own agents**; the harness supplies the mechanism.
 
 ```sh
-git clone https://github.com/esparkman/harness ~/harness
+git clone https://github.com/octanelabsdev/harness ~/harness
 ~/harness/install.sh /path/to/your/project      # interactive: pick your stack + components
 ```
 
@@ -40,7 +40,7 @@ anything you describe.
 | **Agents** — your specialists | your project's `.claude/agents/` (**BYO**) | you drop them in |
 
 The harness ships **zero agents**. Bring your own — or use an example bundle like
-[esparkman/rails-agents](https://github.com/esparkman/rails-agents) for Rails.
+[octanelabsdev/rails-agents](https://github.com/octanelabsdev/rails-agents) for Rails.
 
 ## What's inside
 
@@ -71,7 +71,7 @@ After `install.sh`, your project has:
 ```
 ```jsonc
 // .claude/settings.json   (committed — safe: references the versioned plugin, not a $HOME script)
-{ "extraKnownMarketplaces": { "harness": { "source": { "source": "github", "repo": "esparkman/harness" } } },
+{ "extraKnownMarketplaces": { "harness": { "source": { "source": "github", "repo": "octanelabsdev/harness" } } },
   "enabledPlugins": { "harness@harness": true } }
 ```
 

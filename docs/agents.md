@@ -10,9 +10,9 @@ pipeline wrap around all of them.
 Agents are Markdown files in `.claude/agents/` (Claude Code's native location). Drop yours in — as
 committed files, or as symlinks to a shared bundle.
 
-Using an example bundle, e.g. [esparkman/rails-agents](https://github.com/esparkman/rails-agents):
+Using an example bundle, e.g. [octanelabsdev/rails-agents](https://github.com/octanelabsdev/rails-agents):
 ```sh
-git clone https://github.com/esparkman/rails-agents ~/rails-agents
+git clone https://github.com/octanelabsdev/rails-agents ~/rails-agents
 cd /path/to/your/project && mkdir -p .claude/agents
 for f in ~/rails-agents/rails-*.md ~/rails-agents/dhh-code-reviewer.md; do
   ln -sfn "$f" ".claude/agents/$(basename "$f")"

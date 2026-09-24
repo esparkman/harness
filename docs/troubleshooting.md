@@ -11,7 +11,7 @@ inert until the config exists — that's by design.
 - Confirm the marketplace is known: `claude plugin marketplace list`.
 
 ## `claude plugin install` / `marketplace add` can't find it
-The marketplace is the public repo. Use `esparkman/harness` (GitHub shorthand) or the full URL.
+The marketplace is the public repo. Use `octanelabsdev/harness` (GitHub shorthand) or the full URL.
 Behind a proxy/firewall, ensure github.com is reachable.
 
 ## Gates aren't firing
