@@ -1,0 +1,8 @@
+{
+  "name": "go",
+  "impl_dirs": ["cmd", "internal", "pkg"],
+  "ui_dirs": [],
+  "test_dir": ".",
+  "operator_test_dir": "e2e",
+  "test_command": "go test ./..."
+}
