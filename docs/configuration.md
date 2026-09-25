@@ -91,7 +91,7 @@ and component choices. It contains no secrets and no machine paths — only your
 ## Session-local markers (written as you work)
 
 The gates read/write small marker files under `.claude/` (all gitignored):
-- `.claude/.current-story` — a DoR-passing story stamped `DoR: PASSED` (the pipeline gate's key).
+- `.claude/current-story.yaml` — the DoR-passing story YAML the pipeline gate lints (dor_lint exit 0 = pass; the verdict is computed, not a stamp).
 - `.claude/.small-fix` — declares independent small work that bypasses the pipeline gate.
 - `.claude/.pipeline-block` — promotes the pipeline gate from warn to **block** for this repo.
 - `.claude/.verification-warn` — downgrades the verification gate from **block** to warn-only for this repo.

@@ -42,7 +42,7 @@ Feature work flows **requirement → DoR story → prioritize → build**, enfor
 1. Use the **story-writer** skill to turn a PRD/cited source into a Definition-of-Ready card. It
    never invents boundaries (source → code → escalate) and runs a deterministic DoR lint.
 2. Use the **product-manager** skill to prioritize from real signals and record the active story
-   (`.claude/.current-story` stamped `DoR: PASSED`).
+   (the DoR-passing story YAML at `.claude/current-story.yaml`, which the pipeline gate re-lints).
 3. Only then implement. The **pipeline gate** hook enforces this on the implementation surface
    (your stack's `impl_dirs`); genuinely independent small work declares
    `printf '%s\n' '<what+why>' > .claude/.small-fix`.

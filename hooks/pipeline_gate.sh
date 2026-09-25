@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # PreToolUse gate — no feature build without a prioritized, DoR-passing story. Stack-agnostic.
-# Gates edits to the implementation surface (the stack profile's impl_dirs) unless a
-# `.claude/.current-story` marker stamped `DoR: PASSED` exists, or an explicit `.claude/.small-fix`
-# bypass is declared. Tests, config, docs, and .claude/ are never gated. Inert unless
-# components.pipeline_gate is true in .claude/harness.json. Per-repo: WARN (default) / BLOCK
-# (touch .claude/.pipeline-block).
+# Gates edits to the implementation surface (the stack profile's impl_dirs) unless a story at
+# `.claude/current-story.yaml` PASSES the DoR lint (tools/dor_lint.rb — the verdict is COMPUTED, not a
+# self-written stamp), or an explicit `.claude/.small-fix` bypass is declared. Tests, config, docs, and
+# .claude/ are never gated. Inert unless components.pipeline_gate is true in .claude/harness.json.
+# Per-repo: WARN (default) / BLOCK (touch .claude/.pipeline-block).
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; . "$HERE/_harness_lib.sh"
 
@@ -38,12 +38,25 @@ if [ -f "$cdir/.small-fix" ]; then
   exit 0
 fi
 
-# (b) a prioritized, DoR-passing story is present
-if [ -f "$cdir/.current-story" ] && grep -qiE "DoR:[[:space:]]*PASSED" "$cdir/.current-story" 2>/dev/null; then
-  exit 0
+# (b) a DoR-passing story backs this edit — the verdict is COMPUTED by dor_lint, not a self-written
+# stamp. The story lives at .claude/current-story.yaml; dor_lint exit 0 = DoR: PASSED.
+story="$cdir/current-story.yaml"; lint="$HERE/../tools/dor_lint.rb"
+if [ -f "$story" ]; then
+  if command -v ruby >/dev/null 2>&1 && [ -f "$lint" ]; then
+    if verdict="$(ruby "$lint" "$story" 2>&1)"; then
+      exit 0                                   # dor_lint exit 0 = DoR: PASSED -> story backs the edit
+    fi
+    msg="Pipeline gate: .claude/current-story.yaml did not pass the DoR lint —
+$verdict
+Fix the story until 'ruby dor_lint.rb' exits 0, or declare independent small work via .claude/.small-fix."
+  elif grep -qiE "DoR:[[:space:]]*PASSED" "$story" 2>/dev/null; then
+    exit 0                                     # degraded fallback (no ruby): accept an explicit PASSED stamp
+  else
+    msg="Pipeline gate: .claude/current-story.yaml is present but dor_lint could not run (ruby missing) and the file is not stamped 'DoR: PASSED'. Install ruby for the real gate, or declare small work via .claude/.small-fix."
+  fi
+else
+  msg="Pipeline gate: no DoR-passing story backs this feature edit ($rel). Write a story at .claude/current-story.yaml that passes dor_lint (ruby tools/dor_lint.rb), or declare independent small work: printf '%s\\n' '<what + why>' > .claude/.small-fix"
 fi
-
-msg="Pipeline gate: no DoR-passing, prioritized story backs this feature edit ($rel). Route it through your story/PM flow, then write .claude/.current-story stamped 'DoR: PASSED'. If this is genuinely independent small work, declare it: printf '%s\\n' '<what + why>' > .claude/.small-fix"
 if [ -f "$cdir/.pipeline-block" ]; then
   emit deny "$msg"
 else

@@ -51,7 +51,7 @@ the stop and continues so Claude addresses the gap.
 
 ### Pipeline gate (`pipeline_gate`) — PreToolUse hook
 Before an `Edit`/`Write` to the implementation surface (`impl_dirs`), it requires either:
-- `.claude/.current-story` stamped `DoR: PASSED` (written by the PM pipeline), or
+- a story at `.claude/current-story.yaml` that PASSES the DoR lint (`dor_lint` exit 0 — the gate runs it; the verdict is computed, not a self-written stamp), or
 - `.claude/.small-fix` (an explicit, surfaced escape hatch for genuinely independent small work).
 
 Tests, config, docs, and `.claude/` are never gated. **Warn** by default (advises without deciding —
@@ -91,14 +91,14 @@ only when the lint exits 0.
 
 ### `product-manager`
 Prioritizes from real signals (never invented) and drives the pipeline: prioritize → ready (via
-story-writer) → record `.claude/.current-story` (which unlocks the pipeline gate) → route to an
+story-writer) → record `.claude/current-story.yaml` (which the pipeline gate lints to unlock) → route to an
 engineer (BYO agent) → track. Coordinates gates; never bypasses them. Acts on the board with operator
 authority (triage, move, tag, pin, assign, comment — never delete).
 
 **Tracker:** the harness ships with **Fizzy** as the default board MCP (both skills use
 `fizzy_*` read/act tools, with the delete operations withheld by design). It's a default, not a
 requirement — point the operations at whatever tracker MCP your project uses, or run the pipeline
-against a file-backed backlog (`stories/` + `.claude/.current-story`) with no tracker at all.
+against a file-backed backlog (`stories/` + `.claude/current-story.yaml`) with no tracker at all.
 
 ### `bookshelf`
 Reads your own reference books (EPUBs) in place via `${CLAUDE_PLUGIN_ROOT}/tools/tome.sh`, so a
@@ -114,7 +114,7 @@ Agents can invoke this skill too (see [agents.md](agents.md) → the bookshelf d
 ```
 SessionStart banner ─ reports state
         │
-story-writer → DoR lint → product-manager ─ writes .claude/.current-story (DoR: PASSED)
+story-writer → DoR lint → product-manager ─ writes .claude/current-story.yaml (dor_lint: PASSED)
         │                                          │
         │                                    unlocks
         ▼                                          ▼
