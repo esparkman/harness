@@ -18,6 +18,8 @@
 #   --local             enablement/config in .claude/settings.local.json (just you) instead of committed settings.json
 #   --no-plugin         don't touch settings — only write .claude/harness.json
 #   --ref REF           pin the marketplace to this git tag/branch (default: v<plugin.json version>)
+#   --sha SHA           also pin this exact commit (strongest: ref+sha, the tag can't be re-cut on you)
+#   --no-sha            don't auto-resolve a commit sha for a version-tag ref (ref only)
 #   --no-mcp            don't write .mcp.json even if the stack declares MCP servers
 #   --mcp-download      download any missing MCP guide resources (default: just nudge)
 #   --tomes-dir PATH    set env.TOMES_DIR (EPUB bookshelf) in your config home
@@ -31,9 +33,10 @@ set -euo pipefail
 BUNDLE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MKT_NAME="harness"; MKT_REPO="octanelabsdev/harness"   # this repo, self-referencing marketplace
 ALL_COMPONENTS=(session_banner skill_nudge verification_gate pipeline_gate)
+. "$BUNDLE/lib/harness_detect.sh"   # harness_detect_stack — shared with the auto-bootstrap hook
 
 # --- args ---
-TARGET=""; STACK=""; COMPONENTS=""; SCOPE="project"; DO_PLUGIN=1; DO_GLOBAL=""; ASSUME_YES=""; PIN_REF=""; DO_MCP=1; DO_MCP_DOWNLOAD=0; TOMES_VAL=""; DO_MIGRATE=0; MIG_APPLY=0
+TARGET=""; STACK=""; COMPONENTS=""; SCOPE="project"; DO_PLUGIN=1; DO_GLOBAL=""; ASSUME_YES=""; PIN_REF=""; PIN_SHA=""; DO_SHA=1; DO_MCP=1; DO_MCP_DOWNLOAD=0; TOMES_VAL=""; DO_MIGRATE=0; MIG_APPLY=0
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --migrate) DO_MIGRATE=1; shift;;
@@ -43,6 +46,8 @@ while [ "$#" -gt 0 ]; do
     --local) SCOPE="local"; shift;;
     --no-plugin) DO_PLUGIN=0; shift;;
     --ref) PIN_REF="$2"; shift 2;;
+    --sha) PIN_SHA="$2"; shift 2;;
+    --no-sha) DO_SHA=0; shift;;
     --no-mcp) DO_MCP=0; shift;;
     --mcp-download) DO_MCP_DOWNLOAD=1; shift;;
     --tomes-dir) TOMES_VAL="$2"; shift 2;;
@@ -64,6 +69,17 @@ git -C "$TARGET" rev-parse --show-toplevel >/dev/null 2>&1 || echo "note: $TARGE
 if [ -z "$PIN_REF" ]; then
   _ver="$(jq -r '.version // empty' "$BUNDLE/.claude-plugin/plugin.json" 2>/dev/null)"
   [ -n "$_ver" ] && PIN_REF="v$_ver"
+fi
+
+# Strongest pin = ref + sha: the marketplace source records both the tag and its immutable commit, so
+# even a deleted/re-cut tag upstream can't swap the code under you. Auto-resolve the sha for a version
+# tag (vN.N.N); leave a branch/channel ref (main, stable, …) at ref-only so it can still move. An
+# explicit --sha always wins; --no-sha opts out. Offline / unresolvable -> ref only (never hard-fail).
+if [ "$DO_PLUGIN" = 1 ] && [ -n "$PIN_REF" ] && [ -z "$PIN_SHA" ] && [ "$DO_SHA" = 1 ] \
+   && printf '%s' "$PIN_REF" | grep -qE '^v[0-9]'; then
+  PIN_SHA="$(git ls-remote "https://github.com/$MKT_REPO" "$PIN_REF" "$PIN_REF^{}" 2>/dev/null \
+    | awk '$2 ~ /\^\{\}$/ {peeled=$1} $2 !~ /\^\{\}$/ {plain=$1} END {print (peeled != "" ? peeled : plain)}')"
+  [ -n "$PIN_SHA" ] || echo "  note: could not resolve a commit sha for $PIN_REF (offline, or tag not pushed yet) — pinning ref only" >&2
 fi
 
 ask() { # ask <prompt> <default>  -> echoes answer
@@ -89,12 +105,13 @@ if [ "$DO_MIGRATE" = 1 ]; then
   fi
 fi
 
-# --- 1. stack ---
+# --- 1. stack (auto-detected from the target's on-disk markers; overridable) ---
+DETECTED="$(harness_detect_stack "$TARGET")"
 if [ -z "$STACK" ] && [ -z "$ASSUME_YES" ]; then
   echo "Stack presets: $(ls "$BUNDLE"/stacks | sed 's/.json//' | tr '\n' ' ')  (or 'custom')"
-  STACK="$(ask "Choose a stack [generic]: " generic)"
+  STACK="$(ask "Choose a stack [$DETECTED]: " "$DETECTED")"
 fi
-STACK="${STACK:-generic}"
+STACK="${STACK:-$DETECTED}"
 if [ "$STACK" = "custom" ]; then
   impl="$(ask 'implementation dirs (comma) [src,lib]: ' 'src,lib')"
   ui="$(ask 'UI dirs (comma, blank ok): ' '')"
@@ -133,19 +150,22 @@ echo "  wrote .claude/harness.json"
 # --- 4. enable the plugin (safe committed reference, or --local) ---
 if [ "$DO_PLUGIN" = 1 ]; then
   settings="$cdir/settings.json"; [ "$SCOPE" = "local" ] && settings="$cdir/settings.local.json"
-  python3 - "$settings" "$MKT_NAME" "$MKT_REPO" "$PIN_REF" <<'PY'
+  python3 - "$settings" "$MKT_NAME" "$MKT_REPO" "$PIN_REF" "$PIN_SHA" <<'PY'
 import json, os, sys
-p, mkt, repo, ref = (sys.argv + [""])[1:5]
+p, mkt, repo, ref, sha = (sys.argv + ["", ""])[1:6]
 s = json.load(open(p)) if os.path.exists(p) and os.path.getsize(p) > 0 else {}
 src = {"source": "github", "repo": repo}
 if ref:
     src["ref"] = ref
+if sha:
+    src["sha"] = sha   # ref+sha: Claude Code checks out this exact commit; the tag can't be re-cut on you
 # assign (not setdefault) so re-running re-pins an existing/older/unpinned entry
 s.setdefault("extraKnownMarketplaces", {})[mkt] = {"source": src}
 s.setdefault("enabledPlugins", {})[f"{mkt}@{mkt}"] = True
 with open(p, "w") as f:
     json.dump(s, f, indent=2); f.write("\n")
-print(f"  enabled plugin {mkt}@{mkt} in {os.path.basename(p)} " + (f"(pinned {ref})" if ref else "(UNPINNED — tracks default branch!)"))
+where = (f"pinned {ref}" + (f"@{sha[:12]}" if sha else "")) if ref else "UNPINNED — tracks default branch!"
+print(f"  enabled plugin {mkt}@{mkt} in {os.path.basename(p)} ({where})")
 PY
 else
   echo "  (skipped plugin enablement — run /plugin marketplace add $MKT_REPO && /plugin install $MKT_NAME@$MKT_NAME yourself)"
@@ -231,7 +251,7 @@ cat <<EOF
 ✔ harness wired into $TARGET
   stack       : $(printf '%s' "$STACK_JSON" | jq -r '.name')
   gates active: ${active:-none (all off)}
-  plugin      : $([ "$DO_PLUGIN" = 1 ] && echo "enabled ($SCOPE scope, marketplace pinned ${PIN_REF:-UNPINNED})" || echo "not enabled")
+  plugin      : $([ "$DO_PLUGIN" = 1 ] && echo "enabled ($SCOPE scope, marketplace pinned ${PIN_REF:-UNPINNED}${PIN_SHA:+@${PIN_SHA:0:12}})" || echo "not enabled")
   mcp         : $( [ -n "$(printf '%s' "$STACK_JSON" | jq -c '.mcp // empty')" ] && { [ "$DO_MCP" = 1 ] && echo ".mcp.json written ($(printf '%s' "$STACK_JSON" | jq -r '.mcp|keys|join(", ")'))" || echo "skipped (--no-mcp)"; } || echo "none for this stack")
   agents      : Bring-Your-Own — put your agents in .claude/agents/ (none shipped)
   skills      : guardrails, story-writer, product-manager, bookshelf come with the plugin

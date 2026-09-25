@@ -1,9 +1,19 @@
 # Components: hooks & skills
 
-The harness ships four **hooks** (run by the environment) and four **skills** (invoked by the
-model). Hooks are toggled per project in `.claude/harness.json`; skills come with the plugin.
+The harness ships **hooks** (run by the environment) and **skills** (invoked by the model). Four
+hooks are toggled per project in `.claude/harness.json`; the auto-bootstrap hook has no toggle (it
+runs before any config exists). Skills come with the plugin.
 
 ## Hooks
+
+### Auto-bootstrap (`harness_bootstrap`) — SessionStart hook
+Closes the "installed but does nothing" gap: a plugin has no install-time hook, so the first session
+in a project with **no** `.claude/harness.json` is where the harness configures itself. It detects the
+stack (Rails/Node/Python/Go/generic) and writes a config with all components on and the gates in
+**warn** mode, then announces it in the banner. It **never clobbers** an existing config (no-op if the
+file is present), only runs inside a git repo, and writes `.claude/harness.json` alone — never
+committed `settings.json`. No component toggle (it runs before config exists); opt out with the
+`HARNESS_NO_AUTOBOOTSTRAP=1` environment variable. Configure deliberately instead with `/harness:init`.
 
 ### SessionStart banner (`session_banner`)
 Prints an environment-verified status line at the start of every session — the active config home's

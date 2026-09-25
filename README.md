@@ -44,15 +44,18 @@ The harness ships **zero agents**. Bring your own — or use an example bundle l
 
 ## What's inside
 
-- **Hooks** (`hooks/`) — `session_start_banner`, `skill_nudge`, `verification_gate`, `pipeline_gate`.
-  Portable (`${CLAUDE_PLUGIN_ROOT}`), config-driven, and **inert until you configure them** (the two
-  informational hooks default on; the enforcing gates default off).
+- **Hooks** (`hooks/`) — `harness_bootstrap` (auto-writes `.claude/harness.json` on first session),
+  `session_start_banner`, `skill_nudge`, `verification_gate`, `pipeline_gate`. Portable
+  (`${CLAUDE_PLUGIN_ROOT}`), config-driven (the two informational hooks default on; the enforcing
+  gates default off/warn).
+- **Commands** (`commands/`) — `/harness:init` ((re)configure a project via the installer) and
+  `/harness:agents` (bring your stack's agent bundle into `.claude/agents/`).
 - **Skills** (`skills/`) — `guardrails` (6 playbooks: CODE, DEBUG, VERIFY, TRAPS, RUNTIME,
   MECHANISM), `story-writer`, `product-manager`, `bookshelf`. Model-invoked, stack-agnostic — skills
   are **listed, not auto-applied** (availability ≠ activation), so the `skill_nudge` hook prompts the
   model to invoke the matching one on its own trigger instead of waiting for a `/command`.
 - **Stacks** (`stacks/`) — presets: `rails`, `node`, `python`, `go`, `generic` (+ custom).
-- **Installer** (`install.sh`) — interactive or flag-driven.
+- **Installer** (`install.sh`) — interactive or flag-driven; auto-detects your stack.
 - **Template** (`templates/global-CLAUDE.md`) — a generic starter ruleset for your config home.
 
 ## Installing
@@ -74,16 +77,19 @@ the plugin code can't shift under you):
 ```jsonc
 {
   "extraKnownMarketplaces": {
-    "harness": { "source": { "source": "github", "repo": "octanelabsdev/harness", "ref": "v0.1.4" } }
+    "harness": { "source": { "source": "github", "repo": "octanelabsdev/harness", "ref": "v0.1.5" } }
   },
   "enabledPlugins": { "harness@harness": true }
 }
 ```
 
-> **The plugin alone is inert.** The hooks/gates do nothing until a project has a `.claude/harness.json`
-> (stack profile + which components are on). After a marketplace install, either run `install.sh` to
-> write it, or create it by hand — copy a preset from [`stacks/`](stacks/) under a `"stack"` key and add
-> a `"components"` block (see [docs/configuration.md](docs/configuration.md)).
+> **Installing the plugin is enough to start.** On the first session in a project with no
+> `.claude/harness.json`, the harness **auto-bootstraps** one: it detects your stack (Rails/Node/
+> Python/Go/generic) and writes a config with all components on and the gates in **warn** mode, then
+> says so in the banner. Run `/harness:init` any time to (re)configure it properly (force a stack,
+> pick components, enable it for the team), and `/harness:agents` to pull in your stack's agent bundle.
+> Opt out of auto-bootstrap with `HARNESS_NO_AUTOBOOTSTRAP=1`. (You can still hand-write
+> `.claude/harness.json` — see [docs/configuration.md](docs/configuration.md).)
 
 ### B. With the installer (does everything)
 

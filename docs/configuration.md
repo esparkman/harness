@@ -10,6 +10,7 @@ enforcing gates stay inert.
 {
   "components": {
     "session_banner":    true,   // SessionStart status banner (informational; default shown)
+    "skill_nudge":       true,   // SessionStart + UserPromptSubmit nudge to invoke skills (default on)
     "verification_gate": true,   // Stop gate — operator-test + review checks
     "pipeline_gate":     true    // PreToolUse gate — DoR story required for feature edits
   },
@@ -19,7 +20,11 @@ enforcing gates stay inert.
     "ui_dirs":    ["app/views", "app/controllers"], // subset whose change should ship an operator test
     "test_dir":   "test",                       // where unit/integration tests live
     "operator_test_dir": "test/system",         // where operator/e2e/journey tests live ("" = none)
-    "test_command": "bin/rails test"            // how to run the suite ("" = unknown)
+    "test_command": "bin/rails test",           // how to run the suite ("" = unknown)
+    "agents_bundle": {                          // optional: default agent bundle for /harness:agents
+      "repo": "octanelabsdev/rails-agents",     //   owner/name slug or git URL
+      "glob": ["rails-*.md", "dhh-code-reviewer.md"] // which files in the bundle are agents
+    }
   }
 }
 ```
@@ -33,8 +38,12 @@ enforcing gates stay inert.
   operator-test check.
 - **`test_command`** — quoted back to you in the verification gate's message. If empty, that hint is
   omitted.
-- **`components`** — the three hooks honor these. `session_banner` defaults to shown unless set to
-  `false`; the two gates default **off** when unconfigured (safe).
+- **`components`** — the toggleable hooks honor these. `session_banner` and `skill_nudge` default to
+  **on** unless set to `false`; the two gates (`verification_gate`, `pipeline_gate`) default **off**
+  when unconfigured, and ship in **warn** mode when on. (The `harness_bootstrap` hook has no toggle —
+  it only acts when there's no config yet; see [components.md](components.md).)
+- **`agents_bundle`** (optional) — the default agent bundle `/harness:agents` pulls when given no
+  repo. `repo` is an `owner/name` slug or git URL; `glob` lists which files in the bundle are agents.
 
 Paths are directory prefixes, repo-relative — not globs. `app` matches `app/models/x.rb`.
 
