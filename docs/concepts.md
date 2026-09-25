@@ -76,7 +76,9 @@ work (`~/.claude-work`, selected via `CLAUDE_CONFIG_DIR`) never cross-read.
 
 ## Warn first, block when proven
 
-Both gates ship in **warn** mode: they surface gaps but don't stop you. Promote to blocking only
-where drift proves costly — `touch .claude/.pipeline-block` for the pipeline gate; swap the
-verification gate's trailing `exit 0` for `exit 2`. The real lever isn't the gate — it's making the
-right path (the PM pipeline) the path of least resistance, so the gate rarely fires.
+Deterministic checks block; judgment advises. The verification gate **runs your `test_command` and
+blocks on a red result** — a failing test is a fact — while its operator-test reminder only advises.
+The pipeline gate ships in **warn** mode (it advises without ever auto-approving the edit); promote it
+with `touch .claude/.pipeline-block` where drift proves costly, and downgrade the verification gate to
+warn-only with `.claude/.verification-warn` while rolling out. The real lever isn't the gate — it's
+making the right path (the PM pipeline) the path of least resistance, so the gate rarely fires.

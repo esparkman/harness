@@ -2,18 +2,21 @@
   "components": {
     "session_banner": true,
     "skill_nudge": true,
-    "verification_gate": false,
+    "verification_gate": true,
     "pipeline_gate": false
   },
   "stack": {
     "name": "generic",
     "impl_dirs": [
-      "src",
-      "lib"
+      "hooks",
+      "tools",
+      "lib",
+      "commands",
+      "stacks"
     ],
     "ui_dirs": [],
-    "test_dir": "test",
+    "test_dir": "tools",
     "operator_test_dir": "",
-    "test_command": ""
+    "test_command": "bash tools/ci.sh"
   }
 }

@@ -1,11 +1,24 @@
 #!/usr/bin/env bash
-# Stop hook — verification gate (WARN mode), stack-agnostic.
-# When a turn ends with implementation code changed, it checks (per the project's stack profile)
-# that a UI/implementation change ships with an operator-journey test, and that a code review was
-# recorded for this tree. Inert unless components.verification_gate is true in .claude/harness.json.
+# Stop hook — verification gate, stack-agnostic.
 #
-# Stop hooks may block via exit 2 (verified: docs "Prevents Claude from stopping, continues the
-# conversation"). This ships in WARN mode (exit 0); promote to block at the tail when proven.
+# When a turn ends with implementation code changed (per the stack profile's impl_dirs), it RUNS the
+# project's canonical test_command and BLOCKS if it fails — a red test is a fact, not a judgment, so
+# it is safe to block on. It also reminds (advisory) when a UI/impl change shipped without an
+# operator-journey test. Inert unless components.verification_gate is true in .claude/harness.json.
+#
+# Enforcement posture: a test_command failure BLOCKS by default (locked decision — Layer-0 checks are
+# deterministic). Adopters rolling out gradually can downgrade to warn-only by creating
+# .claude/.verification-warn (a failure is then surfaced but does not block). The operator-test check
+# is always advisory — it is a heuristic, not a pass/fail.
+#
+# Stop-hook mechanics (verified against the hooks guide): exit 2 prevents the stop and continues the
+# conversation so Claude addresses the gap; exit 0 lets the turn end. The stop_hook_active guard keeps
+# a block from looping. (Whether exit-2 stderr is shown to the model is not spelled out in the docs;
+# the block/continue itself is — the enforcement does not depend on the message being surfaced.)
+#
+# NOTE: the old .claude/.last-review "was it reviewed?" check was removed — it compared a model-written
+# marker to HEAD and could not tell a real review from a claimed one. A real review gate returns backed
+# by a reviewer artifact (harness roadmap phase 3).
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; . "$HERE/_harness_lib.sh"
 INPUT="$(cat)"
@@ -33,26 +46,30 @@ done <<< "$changed"
 
 [ -z "$impl" ] && exit 0   # no implementation change in flight → nothing to gate
 
-warn=()
+# Advisory heuristic (never blocks): UI changed but no operator-journey test alongside it.
+op_note=""
 if [ -n "$ui" ] && [ -n "$op_test" ] && [ -z "$op_changed" ]; then
-  warn+=("Operator-task test: implementation UI changed but no $op_test/ change. Add a test that walks the operator's journey (act -> assert the observable outcome), not just an internal-state check.${test_cmd:+ Before 'done', run the FULL suite ($test_cmd) including operator tests.}")
+  op_note="Operator-task test: implementation UI changed but no $op_test/ change. Add a test that walks the operator's journey (act -> assert the observable outcome), not just an internal-state check."
 fi
 
-marker="$repo/.claude/.last-review"; head_sha="$(git rev-parse HEAD 2>/dev/null || echo none)"
-if [ ! -f "$marker" ] || [ "$(cat "$marker" 2>/dev/null)" != "$head_sha" ]; then
-  warn+=("Code review gate: no review recorded for this tree state. Run your reviewer, then record it: echo \"\$(git rev-parse HEAD)\" > .claude/.last-review")
+# Layer 0 — run the canonical test_command and BLOCK on failure (deterministic, unfakeable).
+if [ -n "$test_cmd" ]; then
+  if ! test_out="$(bash -c "$test_cmd" 2>&1)"; then
+    {
+      echo "VERIFICATION GATE — test_command failed: $test_cmd"
+      printf '%s\n' "$test_out" | tail -n 40
+      [ -n "$op_note" ] && echo "$op_note"
+    } >&2
+    if [ -f "$repo/.claude/.verification-warn" ]; then
+      echo "(.claude/.verification-warn present — warn-only, not blocking.)" >&2
+      exit 0
+    fi
+    exit 2
+  fi
 fi
 
-if [ ${#warn[@]} -gt 0 ]; then
-  {
-    echo "VERIFICATION GATE (warn) — self-review steps not evidenced before stopping:"
-    for w in "${warn[@]}"; do echo "  - $w"; done
-    echo "(warn only; not blocking. Promote to block once the warn phase is quiet.)"
-  } >&2
+# test_command passed (or none configured) — surface the advisory heuristic, non-blocking.
+if [ -n "$op_note" ]; then
+  { echo "VERIFICATION GATE (advisory):"; echo "  - $op_note"; } >&2
 fi
 exit 0
-
-# --- PROMOTE TO BLOCK: replace the final `exit 0` with, when warnings exist:
-#   printf '%s\n' "${warn[@]}" >&2
-#   exit 2
-# (exit 2 on Stop feeds stderr back to Claude and continues so it addresses the gap.)
