@@ -139,19 +139,35 @@ HARNESS CHECK (SessionStart hook — environment-verified, not model memory):
 
 ## Maintaining / releasing
 
-The harness ships onto other people's machines, so shipped content must never carry an author-local
-path (a personal vault, a real `/Users/<name>` home, a `~/Development` bundle). Before tagging a release:
+Two gates run before tagging a release. `claude plugin validate` passing is **not** sufficient — it
+checks the manifest schema, not that shipped content is portable or that the plugin actually loads.
+
+**1. Shipped-path guard.** The harness installs onto other people's machines, so shipped content must
+never carry an author-local path (a personal vault, a real `/Users/<name>` home, a `~/Development`
+bundle):
 
 ```sh
 bash tools/check_shipped_paths.sh   # exits non-zero on any author-local path in tracked files
 ```
 
-It scans every tracked file and fails on a personal note-vault path, a `~/Development` bundle path, or
-a real per-user home directory (a documented `/Users/you`-style placeholder is allowed, as is any line
-carrying a `shipped-path-ok` sentinel). Wire it as a pre-push guard if you want it enforced automatically:
+It scans every tracked file (a documented `/Users/you`-style placeholder is allowed, as is any line
+carrying a `shipped-path-ok` sentinel).
+
+**2. Load smoke test.** Proves the plugin actually loads — the duplicate-hooks bug that shipped in
+0.1.0–0.1.2 passed both `validate` and `plugin details`; only a load exercise catches that class:
 
 ```sh
-printf '#!/bin/sh\nexec bash tools/check_shipped_paths.sh\n' > .git/hooks/pre-push
+bash tools/smoke_load.sh   # static manifest hygiene + a live install into a throwaway config
+```
+
+It fails if the manifest re-declares the auto-loaded `hooks/hooks.json` (the duplicate-hooks bug), if
+the hooks file is malformed, or if a throwaway install doesn't load the expected skills/hooks cleanly.
+`--static-only` skips the live install (for machines without `claude`).
+
+Wire both as a pre-push guard if you want them enforced automatically:
+
+```sh
+printf '#!/bin/sh\nbash tools/check_shipped_paths.sh && bash tools/smoke_load.sh --static-only\n' > .git/hooks/pre-push
 chmod +x .git/hooks/pre-push
 ```
 
