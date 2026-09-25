@@ -1,0 +1,19 @@
+{
+  "components": {
+    "session_banner": true,
+    "skill_nudge": true,
+    "verification_gate": false,
+    "pipeline_gate": false
+  },
+  "stack": {
+    "name": "generic",
+    "impl_dirs": [
+      "src",
+      "lib"
+    ],
+    "ui_dirs": [],
+    "test_dir": "test",
+    "operator_test_dir": "",
+    "test_command": ""
+  }
+}
