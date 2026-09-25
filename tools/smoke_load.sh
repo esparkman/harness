@@ -81,9 +81,9 @@ fi
 # Hooks are counted per EVENT (SessionStart, Stop, PreToolUse), not per script —
 # adding a script under an existing event does not change this number.
 printf '%s' "$det" | grep -q "Hooks (3)"  && ok "3 hook events present"  || bad "expected 3 hook events in inventory"
-# 9 invocable items: 5 skills (blind-review, bookshelf, guardrails, product-manager, story-writer) + 4 commands (init, agents, status, doctor).
-printf '%s' "$det" | grep -q "Skills (9)" && ok "9 skills + commands present" || bad "expected 9 skills+commands in inventory"
-for cmd in init agents status doctor; do
+# 10 invocable items: 5 skills (blind-review, bookshelf, guardrails, product-manager, story-writer) + 5 commands (init, agents, status, doctor, update).
+printf '%s' "$det" | grep -q "Skills (10)" && ok "10 skills + commands present" || bad "expected 10 skills+commands in inventory"
+for cmd in init agents status doctor update; do
   printf '%s' "$det" | grep -qw "$cmd" && ok "/harness:$cmd command loaded" || bad "expected $cmd command in inventory"
 done
 
