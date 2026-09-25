@@ -44,10 +44,13 @@ The harness ships **zero agents**. Bring your own — or use an example bundle l
 
 ## What's inside
 
-- **Hooks** (`hooks/`) — `session_start_banner`, `verification_gate`, `pipeline_gate`. Portable
-  (`${CLAUDE_PLUGIN_ROOT}`), config-driven, and **inert until you configure them**.
+- **Hooks** (`hooks/`) — `session_start_banner`, `skill_nudge`, `verification_gate`, `pipeline_gate`.
+  Portable (`${CLAUDE_PLUGIN_ROOT}`), config-driven, and **inert until you configure them** (the two
+  informational hooks default on; the enforcing gates default off).
 - **Skills** (`skills/`) — `guardrails` (6 playbooks: CODE, DEBUG, VERIFY, TRAPS, RUNTIME,
-  MECHANISM), `story-writer`, `product-manager`. Model-invoked, stack-agnostic.
+  MECHANISM), `story-writer`, `product-manager`, `bookshelf`. Model-invoked, stack-agnostic — skills
+  are **listed, not auto-applied** (availability ≠ activation), so the `skill_nudge` hook prompts the
+  model to invoke the matching one on its own trigger instead of waiting for a `/command`.
 - **Stacks** (`stacks/`) — presets: `rails`, `node`, `python`, `go`, `generic` (+ custom).
 - **Installer** (`install.sh`) — interactive or flag-driven.
 - **Template** (`templates/global-CLAUDE.md`) — a generic starter ruleset for your config home.
@@ -103,7 +106,7 @@ After `install.sh`, your project has:
 ```jsonc
 // .claude/harness.json   (committed — your team shares it)
 {
-  "components": { "session_banner": true, "verification_gate": true, "pipeline_gate": true },
+  "components": { "session_banner": true, "skill_nudge": true, "verification_gate": true, "pipeline_gate": true },
   "stack": {
     "name": "rails",
     "impl_dirs": ["app", "lib", "db/migrate"],
@@ -124,7 +127,7 @@ Open a session and the banner reports it:
 ```
 HARNESS CHECK (SessionStart hook — environment-verified, not model memory):
   global CLAUDE.md : present (72 lines)
-  harness          : configured (stack: rails; active: session_banner, verification_gate, pipeline_gate)
+  harness          : configured (stack: rails; active: session_banner, skill_nudge, verification_gate, pipeline_gate)
   agents (BYO)     : 21 agent(s)
 ```
 
@@ -133,7 +136,7 @@ HARNESS CHECK (SessionStart hook — environment-verified, not model memory):
 - **[docs/concepts.md](docs/concepts.md)** — the architecture, the plugin+config split, the security model.
 - **[docs/install.md](docs/install.md)** — install in depth: interactive, flags, scopes, CI, updating, uninstalling.
 - **[docs/configuration.md](docs/configuration.md)** — `.claude/harness.json`, components, stack profiles (presets + custom).
-- **[docs/components.md](docs/components.md)** — the three hooks and three skills, in detail; warn → block.
+- **[docs/components.md](docs/components.md)** — the four hooks and four skills, in detail; warn → block.
 - **[docs/agents.md](docs/agents.md)** — bring-your-own agents: adding, overriding, authoring, the rails-agents example.
 - **[docs/troubleshooting.md](docs/troubleshooting.md)** — FAQ and fixes.
 
