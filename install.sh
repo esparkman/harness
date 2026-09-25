@@ -14,7 +14,7 @@
 #
 # Flags:
 #   --stack NAME        one of: $(ls stacks | sed 's/.json//' | tr '\n' ' ') — or a path to a custom stack JSON
-#   --components LIST    comma list of: session_banner,skill_nudge,verification_gate,pipeline_gate  (default: all)
+#   --components LIST    comma list of: session_banner,skill_nudge,verification_gate,pipeline_gate,review_gate  (default: the first four; review_gate is opt-in)
 #   --local             enablement/config in .claude/settings.local.json (just you) instead of committed settings.json
 #   --no-plugin         don't touch settings — only write .claude/harness.json
 #   --ref REF           pin the marketplace to this git tag/branch (default: v<plugin.json version>)
@@ -131,16 +131,18 @@ echo "  stack: $(printf '%s' "$STACK_JSON" | jq -r '.name')  impl=$(printf '%s' 
 
 # --- 2. components (the enforceable hooks) ---
 declare -A ON
+# review_gate is opt-in (needs a configured reviewer + the blind-review skill) — off unless explicitly picked.
 if [ -n "$COMPONENTS" ]; then
-  for c in "${ALL_COMPONENTS[@]}"; do ON[$c]=false; done
+  for c in "${ALL_COMPONENTS[@]}" review_gate; do ON[$c]=false; done
   IFS=',' read -r -a picked <<< "$COMPONENTS"; for c in "${picked[@]}"; do ON[$c]=true; done
 else
   for c in "${ALL_COMPONENTS[@]}"; do
     if yesno "Activate $c?" y; then ON[$c]=true; else ON[$c]=false; fi
   done
+  if yesno "Activate review_gate? (needs a reviewer + the blind-review skill; advanced)" n; then ON[review_gate]=true; else ON[review_gate]=false; fi
 fi
-COMPS_JSON="$(jq -n --argjson sb "${ON[session_banner]}" --argjson sn "${ON[skill_nudge]}" --argjson vg "${ON[verification_gate]}" --argjson pg "${ON[pipeline_gate]}" \
-  '{session_banner:$sb, skill_nudge:$sn, verification_gate:$vg, pipeline_gate:$pg}')"
+COMPS_JSON="$(jq -n --argjson sb "${ON[session_banner]}" --argjson sn "${ON[skill_nudge]}" --argjson vg "${ON[verification_gate]}" --argjson pg "${ON[pipeline_gate]}" --argjson rg "${ON[review_gate]}" \
+  '{session_banner:$sb, skill_nudge:$sn, verification_gate:$vg, pipeline_gate:$pg, review_gate:$rg}')"
 
 # --- 3. write .claude/harness.json ---
 cdir="$TARGET/.claude"; mkdir -p "$cdir"
@@ -254,7 +256,8 @@ cat <<EOF
   plugin      : $([ "$DO_PLUGIN" = 1 ] && echo "enabled ($SCOPE scope, marketplace pinned ${PIN_REF:-UNPINNED}${PIN_SHA:+@${PIN_SHA:0:12}})" || echo "not enabled")
   mcp         : $( [ -n "$(printf '%s' "$STACK_JSON" | jq -c '.mcp // empty')" ] && { [ "$DO_MCP" = 1 ] && echo ".mcp.json written ($(printf '%s' "$STACK_JSON" | jq -r '.mcp|keys|join(", ")'))" || echo "skipped (--no-mcp)"; } || echo "none for this stack")
   agents      : Bring-Your-Own — put your agents in .claude/agents/ (none shipped)
-  skills      : guardrails, story-writer, product-manager, bookshelf come with the plugin
+  skills      : guardrails, story-writer, product-manager, bookshelf, blind-review come with the plugin
+  commands    : /harness:init, /harness:agents, /harness:status, /harness:doctor
   bookshelf   : $( [ -n "${TOMES_VAL:-}" ] && echo "TOMES_DIR set in config home" || echo "set TOMES_DIR (env) to use the EPUB bookshelf — see docs/agents.md" )
 
 Next: restart Claude Code (or /config) so it picks up the plugin, then open a session —
