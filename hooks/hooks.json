@@ -3,6 +3,7 @@
     "SessionStart": [
       {
         "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/harness_bootstrap.sh\"" },
           { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session_start_banner.sh\"" },
           { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/skill_nudge.sh\"" }
         ]

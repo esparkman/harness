@@ -31,6 +31,7 @@ set -euo pipefail
 BUNDLE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MKT_NAME="harness"; MKT_REPO="octanelabsdev/harness"   # this repo, self-referencing marketplace
 ALL_COMPONENTS=(session_banner skill_nudge verification_gate pipeline_gate)
+. "$BUNDLE/lib/harness_detect.sh"   # harness_detect_stack — shared with the auto-bootstrap hook
 
 # --- args ---
 TARGET=""; STACK=""; COMPONENTS=""; SCOPE="project"; DO_PLUGIN=1; DO_GLOBAL=""; ASSUME_YES=""; PIN_REF=""; DO_MCP=1; DO_MCP_DOWNLOAD=0; TOMES_VAL=""; DO_MIGRATE=0; MIG_APPLY=0
@@ -89,12 +90,13 @@ if [ "$DO_MIGRATE" = 1 ]; then
   fi
 fi
 
-# --- 1. stack ---
+# --- 1. stack (auto-detected from the target's on-disk markers; overridable) ---
+DETECTED="$(harness_detect_stack "$TARGET")"
 if [ -z "$STACK" ] && [ -z "$ASSUME_YES" ]; then
   echo "Stack presets: $(ls "$BUNDLE"/stacks | sed 's/.json//' | tr '\n' ' ')  (or 'custom')"
-  STACK="$(ask "Choose a stack [generic]: " generic)"
+  STACK="$(ask "Choose a stack [$DETECTED]: " "$DETECTED")"
 fi
-STACK="${STACK:-generic}"
+STACK="${STACK:-$DETECTED}"
 if [ "$STACK" = "custom" ]; then
   impl="$(ask 'implementation dirs (comma) [src,lib]: ' 'src,lib')"
   ui="$(ask 'UI dirs (comma, blank ok): ' '')"

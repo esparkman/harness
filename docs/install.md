@@ -92,8 +92,32 @@ The installer is a convenience. You can also do it natively:
 /plugin marketplace add octanelabsdev/harness
 /plugin install harness@harness
 ```
-…then create `.claude/harness.json` yourself (copy a preset from `stacks/` under a `"stack"` key and
-add a `"components"` block). See [configuration.md](configuration.md).
+That's enough to start: on the **first session** in a project with no `.claude/harness.json`, the
+plugin's `harness_bootstrap` hook detects your stack and writes one for you (see below). To configure
+it deliberately instead — force a stack, choose components, enable it team-wide — run `/harness:init`.
+
+## Auto-bootstrap on first session
+
+A plugin has no install-time hook (SessionStart is the earliest point its code runs), so the harness
+bootstraps itself the first time you open a session in an unconfigured project:
+
+- **Only when needed** — it no-ops if `.claude/harness.json` already exists (it never clobbers your
+  config) and only runs inside a git repo.
+- **Stack-detected** — Rails / Node / Python / Go from on-disk markers, else generic.
+- **Safe defaults** — all components on, both gates in **warn** mode (nothing blocks yet).
+- **Announced** — the SessionStart banner tells you it happened and names the detected stack.
+- **`.claude/harness.json` only** — it never touches committed `settings.json`; team enablement stays
+  a deliberate act (`/harness:init` or this installer).
+- **Opt out** — set `HARNESS_NO_AUTOBOOTSTRAP=1` in your environment.
+
+## Slash commands
+
+Two commands ship with the plugin:
+
+| Command | What it does |
+|---|---|
+| `/harness:init [flags]` | Runs this installer non-interactively for the current project. No args → auto-detect stack, all components (warn mode), committed enablement. Pass through any installer flag (`--stack`, `--components`, `--local`, `--no-plugin`, …). |
+| `/harness:agents [--copy] [owner/repo]` | Brings a stack's agent bundle into `.claude/agents/`. No args → the stack's default bundle (e.g. Rails → `octanelabsdev/rails-agents`), **symlinked** and gitignored (per-developer). `--copy` commits real files (whole team). Pass `owner/repo` (or a git URL) to override the bundle. See [agents.md](agents.md). |
 
 ## Updating
 

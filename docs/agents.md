@@ -10,7 +10,34 @@ pipeline wrap around all of them.
 Agents are Markdown files in `.claude/agents/` (Claude Code's native location). Drop yours in — as
 committed files, or as symlinks to a shared bundle.
 
-Using an example bundle, e.g. [octanelabsdev/rails-agents](https://github.com/octanelabsdev/rails-agents):
+### The easy way: `/harness:agents`
+
+```sh
+/harness:agents                 # your stack's default bundle, symlinked (per-developer, gitignored)
+/harness:agents --copy          # same bundle, copied in as committed files (whole team)
+/harness:agents owner/repo      # a specific bundle (slug or git URL) instead of the stack default
+/harness:agents --copy owner/repo
+```
+
+It clones the bundle into a per-machine cache (`${XDG_CACHE_HOME:-~/.cache}/harness/agent-bundles/`),
+then symlinks (default, gitignored) or copies (`--copy`, committed) its agent files into
+`.claude/agents/`. With no repo argument it reads the stack's **default bundle** from
+`.claude/harness.json`; if the stack declares none, it tells you to pass one.
+
+**Declaring a stack's default bundle.** A stack preset (and therefore the `stack` block in
+`.claude/harness.json`) can carry an `agents_bundle`:
+```jsonc
+"agents_bundle": {
+  "repo": "octanelabsdev/rails-agents",       // owner/name slug, or a full git URL
+  "glob": ["rails-*.md", "dhh-code-reviewer.md"] // which files in the bundle are agents
+}
+```
+The `rails` preset ships this. Presets with no `agents_bundle` require an explicit repo argument; an
+explicit bundle with no known glob takes all `*.md` files.
+
+### The manual way
+
+Equivalent to what `/harness:agents` does, if you'd rather wire it yourself:
 ```sh
 git clone https://github.com/octanelabsdev/rails-agents ~/rails-agents
 cd /path/to/your/project && mkdir -p .claude/agents
@@ -21,9 +48,9 @@ done
 printf '%s\n' '.claude/agents/rails-*.md' '.claude/agents/dhh-code-reviewer.md' >> .claude/agents/.gitignore
 ```
 
-Prefer committing real files if you want the whole team to get identical agents without cloning a
-bundle. Prefer gitignored symlinks if agents come from a per-developer clone (never commit a
-`$HOME` path).
+Prefer committing real files (`--copy`) if you want the whole team to get identical agents without
+cloning a bundle. Prefer gitignored symlinks (the default) if agents come from a per-developer clone
+(never commit a `$HOME` path).
 
 ## How agents and the harness interact
 

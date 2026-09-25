@@ -78,9 +78,13 @@ if printf '%s' "$det" | grep -qiE "error|failed|not found|duplicate"; then
 else
   ok "installed and loaded clean"
 fi
-printf '%s' "$det" | grep -q "Hooks (4)"  && ok "4 hooks present"  || bad "expected 4 hooks in inventory"
+# Hooks are counted per EVENT (SessionStart, UserPromptSubmit, Stop, PreToolUse), not per script —
+# adding a script under an existing event does not change this number.
+printf '%s' "$det" | grep -q "Hooks (4)"  && ok "4 hook events present"  || bad "expected 4 hook events in inventory"
 printf '%s' "$det" | grep -q "UserPromptSubmit" && ok "UserPromptSubmit (skill nudge) wired" || bad "expected UserPromptSubmit event in inventory"
-printf '%s' "$det" | grep -q "Skills (4)" && ok "4 skills present" || bad "expected 4 skills in inventory"
+# 6 invocable items: 4 skills (bookshelf, guardrails, product-manager, story-writer) + 2 commands (init, agents).
+printf '%s' "$det" | grep -q "Skills (6)" && ok "6 skills + commands present" || bad "expected 6 skills+commands in inventory"
+printf '%s' "$det" | grep -qw "init" && printf '%s' "$det" | grep -qw "agents" && ok "/harness:init and /harness:agents commands loaded" || bad "expected init + agents commands in inventory"
 
 if [ "$fail" = 0 ]; then echo "OK: plugin installs and loads clean."; else echo "FAIL: load smoke." >&2; fi
 exit "$fail"

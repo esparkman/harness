@@ -5,6 +5,10 @@
   "test_dir": "test",
   "operator_test_dir": "test/system",
   "test_command": "bin/rails test",
+  "agents_bundle": {
+    "repo": "octanelabsdev/rails-agents",
+    "glob": ["rails-*.md", "dhh-code-reviewer.md"]
+  },
   "mcp": {
     "rails": { "command": "bundle", "args": ["exec", "rails-mcp-server", "--mode", "stdio"] }
   },
