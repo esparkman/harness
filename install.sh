@@ -18,7 +18,7 @@
 #   --local             enablement/config in .claude/settings.local.json (just you) instead of committed settings.json
 #   --no-plugin         don't touch settings — only write .claude/harness.json
 #   --ref REF           pin the marketplace to this git tag/branch (default: v<plugin.json version>)
-#   --sha SHA           also pin this exact commit (strongest: ref+sha, the tag can't be re-cut on you)
+#   --sha SHA           also record this commit sha (note: only the ref is enforced via settings→startup)
 #   --no-sha            don't auto-resolve a commit sha for a version-tag ref (ref only)
 #   --no-mcp            don't write .mcp.json even if the stack declares MCP servers
 #   --mcp-download      download any missing MCP guide resources (default: just nudge)
@@ -63,18 +63,22 @@ TARGET="${TARGET:-$PWD}"
 TARGET="$(cd "$TARGET" && pwd)"
 git -C "$TARGET" rev-parse --show-toplevel >/dev/null 2>&1 || echo "note: $TARGET is not a git repo — the hooks use git and will stay inert until it is." >&2
 
-# Pin the marketplace to an IMMUTABLE release tag (default: v<plugin.json version>) rather than a
-# moving branch. Auto-update leaves a tag alone (no new commits on it), so a later compromise or
-# force-push of the harness repo can't flow arbitrary hook code to everyone on their next session.
+# Pin the marketplace to a release tag (default: v<plugin.json version>) rather than a moving branch. A
+# ref-pinned marketplace does NOT auto-update (verified 2026-09-25: pinning a ref drops the autoUpdate
+# flag), so a later force-push of a branch can't flow arbitrary hook code to everyone on their next
+# session. Moving to a newer release is then a deliberate step — see /harness:update.
 if [ -z "$PIN_REF" ]; then
   _ver="$(jq -r '.version // empty' "$BUNDLE/.claude-plugin/plugin.json" 2>/dev/null)"
   [ -n "$_ver" ] && PIN_REF="v$_ver"
 fi
 
-# Strongest pin = ref + sha: the marketplace source records both the tag and its immutable commit, so
-# even a deleted/re-cut tag upstream can't swap the code under you. Auto-resolve the sha for a version
-# tag (vN.N.N); leave a branch/channel ref (main, stable, …) at ref-only so it can still move. An
-# explicit --sha always wins; --no-sha opts out. Offline / unresolvable -> ref only (never hard-fail).
+# We also record the tag's commit sha in the source. HONESTY NOTE (verified 2026-09-25, CLI 2.1.283):
+# only the `ref` is observably enforced through the settings→startup reconcile — the sha did NOT propagate
+# to the machine cache, so the effective guarantee is TAG-LEVEL, not commit-level. A force-re-cut tag
+# upstream could still be pulled on the next reload; the real mitigation is protecting your release tags +
+# account 2FA. We still write the sha (harmless; may be honored at the initial `marketplace add` checkout).
+# Auto-resolve it for a version tag (vN.N.N); leave a branch/channel ref (main, stable, …) at ref-only so
+# it can still move. An explicit --sha always wins; --no-sha opts out. Offline -> ref only (never hard-fail).
 if [ "$DO_PLUGIN" = 1 ] && [ -n "$PIN_REF" ] && [ -z "$PIN_SHA" ] && [ "$DO_SHA" = 1 ] \
    && printf '%s' "$PIN_REF" | grep -qE '^v[0-9]'; then
   PIN_SHA="$(git ls-remote "https://github.com/$MKT_REPO" "$PIN_REF" "$PIN_REF^{}" 2>/dev/null \
@@ -160,7 +164,7 @@ src = {"source": "github", "repo": repo}
 if ref:
     src["ref"] = ref
 if sha:
-    src["sha"] = sha   # ref+sha: Claude Code checks out this exact commit; the tag can't be re-cut on you
+    src["sha"] = sha   # recorded for completeness; effective pin is tag-level (sha not enforced via settings→startup — protect your tags)
 # assign (not setdefault) so re-running re-pins an existing/older/unpinned entry
 s.setdefault("extraKnownMarketplaces", {})[mkt] = {"source": src}
 s.setdefault("enabledPlugins", {})[f"{mkt}@{mkt}"] = True

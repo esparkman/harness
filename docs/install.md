@@ -38,7 +38,7 @@ Run with no flags and it prompts for:
   --local               enablement/config in settings.local.json (just you) instead of committed settings.json
   --no-plugin           only write .claude/harness.json; don't touch settings
   --ref REF             pin the marketplace to this tag/branch (default: v<plugin.json version>)
-  --sha SHA             also pin this exact commit — ref+sha is the strongest pin
+  --sha SHA             also record this commit sha (note: only the ref is enforced via settings→startup)
   --no-sha              don't auto-resolve a commit sha for a version-tag ref (ref only)
   --global              also install the generic global-CLAUDE.md into your config home
   --yes, -y             accept defaults, no prompts
@@ -115,12 +115,15 @@ bootstraps itself the first time you open a session in an unconfigured project:
 
 ## Slash commands
 
-Two commands ship with the plugin:
+These commands ship with the plugin:
 
 | Command | What it does |
 |---|---|
 | `/harness:init [flags]` | Runs this installer non-interactively for the current project. No args → auto-detect stack, all components (warn mode), committed enablement. Pass through any installer flag (`--stack`, `--components`, `--local`, `--no-plugin`, …). |
 | `/harness:agents [--copy] [owner/repo]` | Brings a stack's agent bundle into `.claude/agents/`. No args → the stack's default bundle (e.g. Rails → `octanelabsdev/rails-agents`), **symlinked** and gitignored (per-developer). `--copy` commits real files (whole team). Pass `owner/repo` (or a git URL) to override the bundle. See [agents.md](agents.md). |
+| `/harness:status` | Inventory of what's loaded/configured in this project (components, stack profile, agents, MCP, bookshelf, session markers). |
+| `/harness:doctor` | Deterministic health check — verifies hooks, tool scripts, schema, and config are present and wired. Exits non-zero on a gap (CI/pre-push safe). |
+| `/harness:update [--apply]` | Checks whether a newer release tag exists (read-only by default). With `--apply`, bumps this project's pinned `ref` to the latest tag; then run `/reload-plugins` to activate. See [Updating](#updating). |
 
 ## Updating
 
@@ -128,23 +131,34 @@ Two commands ship with the plugin:
 `.claude/harness.json` directly.
 
 **The pinned plugin version.** The harness is a *third-party* marketplace, so Claude Code does **not**
-auto-update it, and a tag pin doesn't move on its own — that's the point (a moving ref would let any
-push to the harness repo run on every machine at next session). Bumping from, say, `v0.1.5` to
-`v0.1.6` means changing the pinned `ref` in `.claude/settings.json`. No Claude-Code-native command
-does that (`/plugin marketplace update` only refreshes the cached catalog; `claude plugin update`
-doesn't touch the `ref`). So don't hand-edit — **re-run the installer, which re-pins for you:**
+auto-update a `ref`-pinned marketplace — that's the point (a moving ref would let any push to the harness
+repo run on every machine at next session). Bumping from, say, `v0.2.0` to `v0.3.0` means changing the
+pinned `ref` in the `settings.json` that declares the marketplace. How it actually works (verified on CLI
+2.1.283): the **settings source is authoritative**; the machine cache (`~/.claude/plugins/known_marketplaces.json`)
+is reconciled *from* settings at session startup or on `/reload-plugins`. So the update is:
 
-```sh
-~/harness/install.sh --ref v0.1.6 --yes .     # rewrites settings.json to the new tag (+ its sha)
-# across a fleet:
-for r in ~/dev/*; do ~/harness/install.sh --ref v0.1.6 --yes "$r"; done
+```
+/harness:update            # check: installed vs latest release tag (read-only)
+/harness:update --apply     # bump the pinned ref (+sha) in settings to the latest tag
+/reload-plugins            # activate it (or restart Claude Code)
 ```
 
-**Strongest pin (ref + sha).** For a version-tag ref the installer also resolves and pins the tag's
-immutable **commit sha** (`--no-sha` opts out; `--sha SHA` sets it explicitly). `ref + sha` means even
-a deleted or re-cut tag upstream can't swap the code under you — the most secure of the three options
-Claude Code documents (ref+sha > tag > branch). A branch/channel ref (`main`, `stable`) is left at
-ref-only so it can still move.
+`/plugin marketplace update` and `claude plugin update` only refresh the *same* ref — they do **not**
+cross tags. For a **fleet**, re-run the installer instead (it re-pins each repo's committed settings):
+
+```sh
+~/harness/install.sh --ref v0.3.0 --yes .     # rewrites settings.json to the new tag (+ its sha)
+for r in ~/dev/*; do ~/harness/install.sh --ref v0.3.0 --yes "$r"; done
+```
+
+**What the pin actually guarantees (ref, and the sha caveat).** A `ref` pin freezes the marketplace at
+that tag's commit and disables auto-update — verified. The installer *also* records the tag's **commit
+sha** (`--no-sha` opts out; `--sha SHA` sets it explicitly), but **only the `ref` is observably enforced
+through the settings→startup reconcile** — the sha did not propagate to the machine cache in testing. So
+the effective guarantee is **tag-level, not commit-level**: a force-re-cut tag upstream could be pulled on
+the next reload. Protect your release tags (and the account: 2FA, branch/tag protection) — that, not the
+sha, is the real supply-chain mitigation. A branch/channel ref (`main`, `stable`) is left at ref-only so
+it can still move.
 
 ## Uninstalling
 

@@ -51,7 +51,8 @@ The harness ships **zero agents**. Bring your own — or use an example bundle l
   `test_command`, and its opt-in `review_gate` blocks unless a verified blind-review artifact exists).
 - **Commands** (`commands/`) — `/harness:init` ((re)configure a project via the installer),
   `/harness:agents` (bring your stack's agent bundle into `.claude/agents/`), `/harness:status`
-  (inventory of what's loaded/configured), and `/harness:doctor` (health check — exits non-zero on a gap).
+  (inventory of what's loaded/configured), `/harness:doctor` (health check — exits non-zero on a gap),
+  and `/harness:update` (check for / move to a newer release tag).
 - **Skills** (`skills/`) — `guardrails` (6 playbooks: CODE, DEBUG, VERIFY, TRAPS, RUNTIME,
   MECHANISM), `story-writer`, `product-manager`, `bookshelf`, `blind-review`. Model-invoked, stack-agnostic — skills
   are **listed, not auto-applied** (availability ≠ activation), so the `skill_nudge` hook prompts the
@@ -79,7 +80,7 @@ the plugin code can't shift under you):
 ```jsonc
 {
   "extraKnownMarketplaces": {
-    "harness": { "source": { "source": "github", "repo": "octanelabsdev/harness", "ref": "v0.2.0" } }
+    "harness": { "source": { "source": "github", "repo": "octanelabsdev/harness", "ref": "v0.2.1" } }
   },
   "enabledPlugins": { "harness@harness": true }
 }

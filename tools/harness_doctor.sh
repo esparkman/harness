@@ -31,7 +31,8 @@ fi
 # 2. tool scripts exist (+ executable for *.sh)
 echo "tools:"
 for t in tools/review_verify.sh tools/dor_lint.rb tools/ci.sh tools/test_hooks.sh tools/tome.sh \
-         tools/check_shipped_paths.sh tools/smoke_load.sh tools/harness_status.sh tools/harness_doctor.sh; do
+         tools/check_shipped_paths.sh tools/smoke_load.sh tools/harness_status.sh tools/harness_doctor.sh \
+         tools/harness_update.sh; do
   if [ -f "$PLUGIN/$t" ]; then
     case "$t" in
       *.sh) [ -x "$PLUGIN/$t" ] && ok "$t" || note "$t present but not executable (chmod +x)";;
@@ -63,6 +64,10 @@ else
     if [ -d .claude/agents ] && ls .claude/agents/*.md >/dev/null 2>&1; then ok "review_gate on + a reviewer agent is present"; else bad "review_gate on but no reviewer in .claude/agents (BYO a reviewer)"; fi
   fi
 fi
+
+echo "releases:"
+note_ver="$(jq -r '.version // "?"' "$PLUGIN/.claude-plugin/plugin.json" 2>/dev/null)"
+echo "  → loaded v$note_ver — run /harness:update --check for a newer release (network check; not run here)"
 
 echo
 if [ "$fail" != 0 ]; then
