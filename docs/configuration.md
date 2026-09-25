@@ -11,8 +11,9 @@ enforcing gates stay inert.
   "components": {
     "session_banner":    true,   // SessionStart status banner (informational; default shown)
     "skill_nudge":       true,   // SessionStart nudge to invoke skills (default on)
-    "verification_gate": true,   // Stop gate — operator-test + review checks
-    "pipeline_gate":     true    // PreToolUse gate — DoR story required for feature edits
+    "verification_gate": true,   // Stop gate — runs test_command; blocks on failure
+    "pipeline_gate":     true,   // PreToolUse gate — DoR story required for feature edits
+    "review_gate":       false   // Stop gate — require a verified blind-review artifact (opt-in, default off)
   },
   "stack": {
     "name": "rails",                            // label, shown in the banner
@@ -40,11 +41,13 @@ enforcing gates stay inert.
   a non-zero exit blocks (see [components.md](components.md)). If empty, the gate only runs its
   advisory operator-test check.
 - **`components`** — the toggleable hooks honor these. `session_banner` and `skill_nudge` default to
-  **on** unless set to `false`; the two gates (`verification_gate`, `pipeline_gate`) default **off**
-  when unconfigured. When on, the pipeline gate runs in **warn** mode, and the verification gate
-  **blocks** on a `test_command` failure (opt down with `.claude/.verification-warn`). (The
-  `harness_bootstrap` hook has no toggle —
-  it only acts when there's no config yet; see [components.md](components.md).)
+  **on** unless set to `false`; the gates (`verification_gate`, `pipeline_gate`, `review_gate`) default
+  **off** when unconfigured. When on, the pipeline gate runs in **warn** mode, and the verification gate
+  **blocks** on a `test_command` failure (opt down with `.claude/.verification-warn`). `review_gate`
+  (also part of the verification-gate Stop hook, opt-in) additionally requires a **verified blind-review
+  artifact** for the current diff — produced by the `blind-review` skill, checked by
+  `tools/review_verify.sh`; same `.claude/.verification-warn` downgrade. (The `harness_bootstrap` hook
+  has no toggle — it only acts when there's no config yet; see [components.md](components.md).)
 - **`agents_bundle`** (optional) — the default agent bundle `/harness:agents` pulls when given no
   repo. `repo` is an `owner/name` slug or git URL; `glob` lists which files in the bundle are agents.
 
@@ -95,3 +98,4 @@ The gates read/write small marker files under `.claude/` (all gitignored):
 - `.claude/.small-fix` — declares independent small work that bypasses the pipeline gate.
 - `.claude/.pipeline-block` — promotes the pipeline gate from warn to **block** for this repo.
 - `.claude/.verification-warn` — downgrades the verification gate from **block** to warn-only for this repo.
+- `.claude/.review/current.json` — the blind-review findings artifact (written by the `blind-review` skill, verified by `tools/review_verify.sh`; required when `review_gate` is on).

@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Blind-review findings artifact",
+  "description": "The artifact a blind code review writes to .claude/.review/current.json. review_verify.sh is the authoritative gate; this schema documents the shape. The verdict is COMPUTED by the reviewer over the diff, and re-verified against the diff by review_verify.sh — it is never a self-asserted stamp.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["diff_sha", "verdict", "findings"],
+  "properties": {
+    "base": {
+      "type": "string",
+      "description": "The ref/sha the reviewed diff was taken against (informational; the gate reviews `git diff HEAD` + untracked)."
+    },
+    "diff_sha": {
+      "type": "string",
+      "description": "sha256 of the exact diff that was reviewed. The gate recomputes the current diff and refuses the artifact if this does not match (edited-after-review => stale).",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "description": "ISO-8601 timestamp the review was produced."
+    },
+    "verdict": {
+      "type": "string",
+      "description": "pass = no critical findings; changes-requested = at least one critical finding.",
+      "enum": ["pass", "changes-requested"]
+    },
+    "findings": {
+      "type": "array",
+      "description": "Every finding must cite a real changed line: review_verify.sh rejects the artifact if any file:line is not in the current diff.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["file", "line", "severity", "summary", "failure_scenario"],
+        "properties": {
+          "file": { "type": "string", "description": "Repo-relative path of the finding." },
+          "line": { "type": "integer", "minimum": 1, "description": "1-indexed new-file line, must fall in a changed hunk of the diff." },
+          "severity": { "type": "string", "enum": ["critical", "improvement"] },
+          "category": { "type": "string", "description": "Short kebab-case slug, e.g. correctness, n+1, authorization, operator-task." },
+          "summary": { "type": "string", "description": "One-sentence statement of the defect." },
+          "failure_scenario": { "type": "string", "description": "Concrete inputs/state -> wrong output/crash. The evidence the finding is real." },
+          "evidence": { "type": "string", "description": "For a structural claim, the ground-truth introspection run (bin/rails runner / rails-mcp / schema); otherwise the quoted code or reasoning." }
+        }
+      }
+    }
+  }
+}
