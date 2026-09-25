@@ -49,8 +49,9 @@ The harness ships **zero agents**. Bring your own — or use an example bundle l
   (`${CLAUDE_PLUGIN_ROOT}`), config-driven (the two informational hooks default on; the enforcing
   gates default off — when on, the pipeline gate warns and the verification gate blocks on a failing
   `test_command`).
-- **Commands** (`commands/`) — `/harness:init` ((re)configure a project via the installer) and
-  `/harness:agents` (bring your stack's agent bundle into `.claude/agents/`).
+- **Commands** (`commands/`) — `/harness:init` ((re)configure a project via the installer),
+  `/harness:agents` (bring your stack's agent bundle into `.claude/agents/`), `/harness:status`
+  (inventory of what's loaded/configured), and `/harness:doctor` (health check — exits non-zero on a gap).
 - **Skills** (`skills/`) — `guardrails` (6 playbooks: CODE, DEBUG, VERIFY, TRAPS, RUNTIME,
   MECHANISM), `story-writer`, `product-manager`, `bookshelf`, `blind-review`. Model-invoked, stack-agnostic — skills
   are **listed, not auto-applied** (availability ≠ activation), so the `skill_nudge` hook prompts the
