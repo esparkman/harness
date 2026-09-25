@@ -20,7 +20,7 @@ Prints an environment-verified status line at the start of every session — the
 global ruleset, the harness config + stack, and your BYO agent count. Its whole point is to report
 *reality* rather than what the model remembers. Shown unless `components.session_banner` is `false`.
 
-### Skill nudge (`skill_nudge`) — SessionStart + UserPromptSubmit hook
+### Skill nudge (`skill_nudge`) — SessionStart hook
 Skills are **listed, not auto-applied**: at session start Claude Code registers them (availability),
 but a skill's instructions only take effect once it's invoked (activation). Without a prompt the
 operator has to type `/harness:<name>` before a skill shapes the response. This hook injects a
@@ -29,30 +29,34 @@ directive so the model invokes the right skill *on its own* the moment a trigger
 what's next / triaging / routing ready work), `story-writer` (writing or refining a story). It changes
 model behavior only; a hook cannot call a skill itself.
 
-Fires on two events for durability: the **full** directive once at `SessionStart`, and a **terse**
-one-line reminder on each `UserPromptSubmit` so the trigger stays fresh in a long session. Shown
+Fires once per session at `SessionStart` with the **full** directive. (It previously also fired a
+terse reminder on every `UserPromptSubmit`; that was dropped — the per-prompt injection added up over
+a long session, and the SessionStart directive plus the auto-listed skills carry the reminder.) Shown
 unless `components.skill_nudge` is `false`.
 
 ### Verification gate (`verification_gate`) — Stop hook
-When a turn ends with implementation code changed (per `impl_dirs`), it warns if:
-- a **UI/impl change** (per `ui_dirs`) shipped without a change under `operator_test_dir` — i.e. no
-  operator-journey test; and/or
-- **no code review** was recorded for the current tree (`.claude/.last-review` != HEAD).
+When a turn ends with implementation code changed (per `impl_dirs`), it **runs the project's
+`test_command`** and **blocks** (`exit 2`) if it fails — a red test is a fact, not a judgment, so it
+is safe to block on. It also **advises** (never blocks) when a UI/impl change (per `ui_dirs`) shipped
+without a change under `operator_test_dir` — i.e. no operator-journey test. It short-circuits on
+`stop_hook_active` so it can never loop. Inert unless `components.verification_gate` is `true`.
 
-Ships in **warn** mode (surfaces on stderr, exits 0). It short-circuits on `stop_hook_active` so it
-can never loop. Inert unless `components.verification_gate` is `true`.
+A `test_command` failure **blocks by default**. Rolling out gradually? `touch .claude/.verification-warn`
+to downgrade to warn-only (the failure is surfaced but doesn't block). A Stop hook's `exit 2` prevents
+the stop and continues so Claude addresses the gap.
 
-Promote to **block**: replace the trailing `exit 0` with, when warnings exist,
-`printf '%s\n' "${warn[@]}" >&2; exit 2`. A Stop hook's `exit 2` feeds the message back to Claude and
-continues so it addresses the gap.
+> The old `.claude/.last-review` "was it reviewed?" check was removed — it compared a model-written
+> marker to HEAD and couldn't tell a real review from a claimed one. A real review gate returns backed
+> by a reviewer artifact (roadmap phase 3).
 
 ### Pipeline gate (`pipeline_gate`) — PreToolUse hook
 Before an `Edit`/`Write` to the implementation surface (`impl_dirs`), it requires either:
 - `.claude/.current-story` stamped `DoR: PASSED` (written by the PM pipeline), or
 - `.claude/.small-fix` (an explicit, surfaced escape hatch for genuinely independent small work).
 
-Tests, config, docs, and `.claude/` are never gated. **Warn** by default (allows + announces);
-`touch .claude/.pipeline-block` to **block**. Inert unless `components.pipeline_gate` is `true`.
+Tests, config, docs, and `.claude/` are never gated. **Warn** by default (advises without deciding —
+it never auto-approves the edit); `touch .claude/.pipeline-block` to **block**. Inert unless
+`components.pipeline_gate` is `true`.
 
 > Both gates read the *stack profile*, so "implementation surface" and "operator test" mean whatever
 > your stack says — see [configuration.md](configuration.md).

@@ -80,8 +80,7 @@ Guidance:
 - **Ground the agent in truth, not memory.** If your stack has a way to query the real project
   (a language server, a schema/route introspector, an MCP server), instruct the agent to use it
   before inferring structure from partial reads.
-- **A reviewer at the end.** Keep a review agent as the final gate; the verification gate expects a
-  review recorded in `.claude/.last-review`.
+- **A reviewer at the end.** Keep a review agent as the final gate before you call work done.
 - **Let the harness carry discipline.** You don't need to bake guardrails or verification rules into
   each agent — the guardrails skill and the gates handle that globally. Keep agents focused on their
   domain.

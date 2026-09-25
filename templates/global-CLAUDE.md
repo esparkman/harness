@@ -66,9 +66,8 @@ output in the same turn proving it (run your stack's `test_command` and quote th
 check wasn't run, say so; never claim success with errors outstanding.
 
 ## Code review gate
-A code change isn't complete until your configured reviewer has reviewed it. Record the review for
-the tree state (`echo "$(git rev-parse HEAD)" > .claude/.last-review`) so the verification gate
-sees it. Apply required fixes and re-review before reporting done or committing.
+A code change isn't complete until your configured reviewer has reviewed it. Apply required fixes and
+re-review before reporting done or committing.
 
 ## Git commit standards
 Write meaningful commit messages (imperative mood; say what and why). Never commit or push unless

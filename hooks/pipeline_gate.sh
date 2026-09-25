@@ -21,12 +21,20 @@ rel="${file_path#"$repo"/}"
 path_under "$rel" impl_dirs || exit 0   # only gate the implementation surface
 
 cdir="$repo/.claude"
-emit() { jq -n --arg d "$1" --arg r "$2" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:$d,permissionDecisionReason:$r}}'; }
+emit()   { jq -n --arg d "$1" --arg r "$2" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:$d,permissionDecisionReason:$r}}'; }
+# Warn/advisory channel: surface a message WITHOUT deciding. Emitting no permissionDecision and
+# exiting 0 leaves the user's normal edit-permission flow intact (verified against the hooks guide:
+# "Exit 0 … for a PreToolUse hook this doesn't approve the tool call: the normal permission flow
+# still applies") — so warn mode never auto-approves. `additionalContext` is the best-documented way
+# to get the text to Claude on PreToolUse (hooks guide: additionalContext is kept and passed to
+# Claude); single-hook surfacing isn't spelled out, so treat message visibility as best-effort — the
+# no-auto-approve guarantee does NOT depend on it.
+advise() { jq -n --arg c "$1" '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:$c}}'; }
 
 # (a) explicit small-fix escape hatch — allowed, but surfaced every time so it can't hide
 if [ -f "$cdir/.small-fix" ]; then
   what=$(head -1 "$cdir/.small-fix" 2>/dev/null)
-  emit allow "SMALL-FIX BYPASS active${what:+ — $what}. Pipeline gate skipped; remove .claude/.small-fix when done."
+  advise "SMALL-FIX BYPASS active${what:+ — $what}. Pipeline gate not enforcing; remove .claude/.small-fix when done."
   exit 0
 fi
 
@@ -39,6 +47,6 @@ msg="Pipeline gate: no DoR-passing, prioritized story backs this feature edit ($
 if [ -f "$cdir/.pipeline-block" ]; then
   emit deny "$msg"
 else
-  emit allow "PIPELINE GATE (warn) — $msg  [warn only; touch .claude/.pipeline-block to enforce]"
+  advise "PIPELINE GATE (warn) — $msg  [warn only; does not block or auto-approve — touch .claude/.pipeline-block to enforce]"
 fi
 exit 0

@@ -10,7 +10,7 @@ enforcing gates stay inert.
 {
   "components": {
     "session_banner":    true,   // SessionStart status banner (informational; default shown)
-    "skill_nudge":       true,   // SessionStart + UserPromptSubmit nudge to invoke skills (default on)
+    "skill_nudge":       true,   // SessionStart nudge to invoke skills (default on)
     "verification_gate": true,   // Stop gate — operator-test + review checks
     "pipeline_gate":     true    // PreToolUse gate — DoR story required for feature edits
   },
@@ -36,11 +36,14 @@ enforcing gates stay inert.
   operator-journey test. Leave `[]` for stacks with no UI layer.
 - **`operator_test_dir`** — where journey/e2e tests live. If empty, the verification gate skips the
   operator-test check.
-- **`test_command`** — quoted back to you in the verification gate's message. If empty, that hint is
-  omitted.
+- **`test_command`** — the canonical check the verification gate **runs** on a Stop with impl changes;
+  a non-zero exit blocks (see [components.md](components.md)). If empty, the gate only runs its
+  advisory operator-test check.
 - **`components`** — the toggleable hooks honor these. `session_banner` and `skill_nudge` default to
   **on** unless set to `false`; the two gates (`verification_gate`, `pipeline_gate`) default **off**
-  when unconfigured, and ship in **warn** mode when on. (The `harness_bootstrap` hook has no toggle —
+  when unconfigured. When on, the pipeline gate runs in **warn** mode, and the verification gate
+  **blocks** on a `test_command` failure (opt down with `.claude/.verification-warn`). (The
+  `harness_bootstrap` hook has no toggle —
   it only acts when there's no config yet; see [components.md](components.md).)
 - **`agents_bundle`** (optional) — the default agent bundle `/harness:agents` pulls when given no
   repo. `repo` is an `owner/name` slug or git URL; `glob` lists which files in the bundle are agents.
@@ -91,4 +94,4 @@ The gates read/write small marker files under `.claude/` (all gitignored):
 - `.claude/.current-story` — a DoR-passing story stamped `DoR: PASSED` (the pipeline gate's key).
 - `.claude/.small-fix` — declares independent small work that bypasses the pipeline gate.
 - `.claude/.pipeline-block` — promotes the pipeline gate from warn to **block** for this repo.
-- `.claude/.last-review` — the HEAD sha a reviewer signed off (the verification gate's review check).
+- `.claude/.verification-warn` — downgrades the verification gate from **block** to warn-only for this repo.

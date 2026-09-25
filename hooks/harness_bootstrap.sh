@@ -23,7 +23,9 @@ preset="$HERE/../stacks/$stack.json"
 [ -f "$preset" ] || { stack="generic"; preset="$HERE/../stacks/generic.json"; }
 [ -f "$preset" ] || exit 0                                           # presets missing -> do nothing
 
-# All components on; gates default to WARN (blocking is opt-in via .claude/.pipeline-block etc.).
+# All components on, warn-first: the pipeline gate warns until .claude/.pipeline-block, and a
+# .claude/.verification-warn marker (written below) keeps the verification gate in warn mode until the
+# adopter opts into blocking by removing it.
 comps='{"session_banner":true,"skill_nudge":true,"verification_gate":true,"pipeline_gate":true}'
 
 mkdir -p "$repo/.claude"
@@ -32,6 +34,10 @@ if ! jq -n --argjson c "$comps" --slurpfile s "$preset" \
   rm -f "$repo/.claude/harness.json"   # don't leave a truncated/partial config behind
   exit 0
 fi
+
+# Warn-first for auto-configured repos: the verification gate blocks on a failing test_command by
+# default, but a repo that never explicitly opted in shouldn't start blocking. Drop the warn marker.
+: > "$repo/.claude/.verification-warn" 2>/dev/null || true
 
 msg="HARNESS AUTO-BOOTSTRAP: no .claude/harness.json found — detected stack '$stack' and wrote one (all components on; gates in WARN mode). Customize it with /harness:init, add your agents with /harness:agents, or set HARNESS_NO_AUTOBOOTSTRAP=1 to opt out."
 printf '%s\n' "$msg"

@@ -47,7 +47,8 @@ The harness ships **zero agents**. Bring your own — or use an example bundle l
 - **Hooks** (`hooks/`) — `harness_bootstrap` (auto-writes `.claude/harness.json` on first session),
   `session_start_banner`, `skill_nudge`, `verification_gate`, `pipeline_gate`. Portable
   (`${CLAUDE_PLUGIN_ROOT}`), config-driven (the two informational hooks default on; the enforcing
-  gates default off/warn).
+  gates default off — when on, the pipeline gate warns and the verification gate blocks on a failing
+  `test_command`).
 - **Commands** (`commands/`) — `/harness:init` ((re)configure a project via the installer) and
   `/harness:agents` (bring your stack's agent bundle into `.claude/agents/`).
 - **Skills** (`skills/`) — `guardrails` (6 playbooks: CODE, DEBUG, VERIFY, TRAPS, RUNTIME,

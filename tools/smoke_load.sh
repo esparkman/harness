@@ -78,10 +78,9 @@ if printf '%s' "$det" | grep -qiE "error|failed|not found|duplicate"; then
 else
   ok "installed and loaded clean"
 fi
-# Hooks are counted per EVENT (SessionStart, UserPromptSubmit, Stop, PreToolUse), not per script —
+# Hooks are counted per EVENT (SessionStart, Stop, PreToolUse), not per script —
 # adding a script under an existing event does not change this number.
-printf '%s' "$det" | grep -q "Hooks (4)"  && ok "4 hook events present"  || bad "expected 4 hook events in inventory"
-printf '%s' "$det" | grep -q "UserPromptSubmit" && ok "UserPromptSubmit (skill nudge) wired" || bad "expected UserPromptSubmit event in inventory"
+printf '%s' "$det" | grep -q "Hooks (3)"  && ok "3 hook events present"  || bad "expected 3 hook events in inventory"
 # 6 invocable items: 4 skills (bookshelf, guardrails, product-manager, story-writer) + 2 commands (init, agents).
 printf '%s' "$det" | grep -q "Skills (6)" && ok "6 skills + commands present" || bad "expected 6 skills+commands in inventory"
 printf '%s' "$det" | grep -qw "init" && printf '%s' "$det" | grep -qw "agents" && ok "/harness:init and /harness:agents commands loaded" || bad "expected init + agents commands in inventory"
