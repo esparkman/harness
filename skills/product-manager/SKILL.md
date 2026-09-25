@@ -36,12 +36,14 @@ ranking is auditable, not implicit.
 1. **Prioritize** and promote the top item.
 2. **Ready it** — route to the `story-writer` skill to produce a DoR-passing card. **Never dispatch a
    NOT-READY item to an engineer** — surface its open questions and hold.
-3. **Record the active story** so the pipeline gate authorizes the build:
+3. **Record the active story** so the pipeline gate authorizes the build — place the DoR-passing story
+   YAML (the one story-writer got to `DoR: PASSED`, exit 0) at `.claude/current-story.yaml`:
    ```
-   printf 'story: %s\nDoR: PASSED\ngoal: %s\n' "$id" "$goal" > .claude/.current-story
+   cp <path-to-passing-story>.yaml .claude/current-story.yaml
    ```
-   Overwrite it when you promote the next item; clear it when the item is done so a stale card can't
-   authorize unrelated work.
+   The pipeline gate re-runs `dor_lint` on that file, so a NOT-READY story can't authorize a build — the
+   verdict is computed, not a stamp you write. Overwrite it when you promote the next item; delete it
+   when the item is done so a stale card can't authorize unrelated work.
 4. **Route** the ready item to the right engineer (agents are BYO — the project's own `.claude/agents/`),
    coordinate the hand-off, and honor the review gate before anything is "done." You don't write the
    code or bypass the review.
@@ -63,4 +65,4 @@ point these operations at whatever tracker MCP your project uses. With Fizzy:
   `fizzy_delete_column`) — retire work by moving it to Not Now, never by deleting.
 
 No tracker MCP configured? Run the same pipeline against a file-backed backlog (a `stories/` dir plus
-`.claude/.current-story`); the signals and gates are identical, only the persistence differs.
+`.claude/current-story.yaml`); the signals and gates are identical, only the persistence differs.

@@ -55,11 +55,54 @@ out="$(run_pre "$R" "$R/lib/foo.rb")"
 [ "$(printf '%s' "$out" | jq -r '.hookSpecificOutput.permissionDecision // "none"' 2>/dev/null)" = deny ] && ok "block: denies the edit" || no "block: expected permissionDecision deny"
 rm -f "$R/.claude/.pipeline-block"
 
-# DoR-passing story present -> silent (no objection, exit 0)
-printf 'DoR: PASSED\n' > "$R/.claude/.current-story"
+# DoR-passing story (dor_lint exit 0) -> silent allow (verdict COMPUTED, not a self-written stamp)
+cat > "$R/.claude/current-story.yaml" <<'YAML'
+id: STORY-1
+title: Admin sees their invitations
+source: PRD 3.2
+operator: admin
+goal: an admin sees the invitations they sent
+business_rules:
+  - id: BR1
+    predicate: an invitation belongs to the admin who created it
+acceptance_criteria:
+  - given: an admin with 2 sent invitations
+    when: they visit the Reviews page
+    then: they see both listed
+    covers: [BR1]
+    outcome_type: rendered
+out_of_scope:
+  - editing an invitation after it is sent
+YAML
 out="$(run_pre "$R" "$R/lib/foo.rb")"
-[ -z "$out" ] && ok "story present: silent (no objection)" || no "story present: expected no output, got: $out"
-rm -f "$R/.claude/.current-story"
+[ -z "$out" ] && ok "DoR-passing story (dor_lint exit 0): silent allow" || no "passing story: expected silence, got: $out"
+
+# NOT-READY story (dor_lint exit 1) -> warn advises, still no decision (no auto-approve)
+cat > "$R/.claude/current-story.yaml" <<'YAML'
+id: STORY-2
+title: vague
+source: PRD
+operator: admin
+goal: do the thing
+business_rules:
+  - id: BR1
+    predicate: something happens
+acceptance_criteria:
+  - given: a user
+    when: they act
+    then: it works
+    covers: [BR1]
+    outcome_type: rendered
+out_of_scope: []
+YAML
+out="$(run_pre "$R" "$R/lib/foo.rb")"
+if printf '%s' "$out" | grep -q '"permissionDecision"'; then no "NOT-READY story: emitted a decision (must not auto-approve)"; else ok "NOT-READY story: no permissionDecision (warn)"; fi
+printf '%s' "$out" | grep -q '"additionalContext"' && ok "NOT-READY story: surfaces the lint verdict via additionalContext" || no "NOT-READY story: expected additionalContext"
+# NOT-READY story + block mode -> deny
+touch "$R/.claude/.pipeline-block"
+out="$(run_pre "$R" "$R/lib/foo.rb")"
+[ "$(printf '%s' "$out" | jq -r '.hookSpecificOutput.permissionDecision // "none"' 2>/dev/null)" = deny ] && ok "NOT-READY story + block: denies" || no "NOT-READY block: expected deny"
+rm -f "$R/.claude/.pipeline-block" "$R/.claude/current-story.yaml"
 
 # small-fix bypass -> advise, still no decision (no auto-approve)
 printf 'quick typo\n' > "$R/.claude/.small-fix"
