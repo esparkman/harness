@@ -22,6 +22,9 @@
 #   --mcp-download      download any missing MCP guide resources (default: just nudge)
 #   --tomes-dir PATH    set env.TOMES_DIR (EPUB bookshelf) in your config home
 #   --global            also install the generic global-CLAUDE.md into your config home
+#   --migrate           first clean a legacy (pre-plugin) install: committed hooks/settings, symlinked
+#                       agents, committed shelf/guardrail copies. Dry-run unless --apply is also passed.
+#   --apply             with --migrate, actually perform the cleanup (backs up what it removes)
 #   --yes               accept defaults, no prompts
 set -euo pipefail
 
@@ -30,9 +33,11 @@ MKT_NAME="harness"; MKT_REPO="octanelabsdev/harness"   # this repo, self-referen
 ALL_COMPONENTS=(session_banner verification_gate pipeline_gate)
 
 # --- args ---
-TARGET=""; STACK=""; COMPONENTS=""; SCOPE="project"; DO_PLUGIN=1; DO_GLOBAL=""; ASSUME_YES=""; PIN_REF=""; DO_MCP=1; DO_MCP_DOWNLOAD=0; TOMES_VAL=""
+TARGET=""; STACK=""; COMPONENTS=""; SCOPE="project"; DO_PLUGIN=1; DO_GLOBAL=""; ASSUME_YES=""; PIN_REF=""; DO_MCP=1; DO_MCP_DOWNLOAD=0; TOMES_VAL=""; DO_MIGRATE=0; MIG_APPLY=0
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --migrate) DO_MIGRATE=1; shift;;
+    --apply) MIG_APPLY=1; shift;;
     --stack) STACK="$2"; shift 2;;
     --components) COMPONENTS="$2"; shift 2;;
     --local) SCOPE="local"; shift;;
@@ -43,7 +48,7 @@ while [ "$#" -gt 0 ]; do
     --tomes-dir) TOMES_VAL="$2"; shift 2;;
     --global) DO_GLOBAL=1; shift;;
     --yes|-y) ASSUME_YES=1; shift;;
-    -h|--help) sed -n '2,32p' "$0"; exit 0;;
+    -h|--help) sed -n '2,28p' "$0"; exit 0;;
     -*) echo "unknown flag: $1" >&2; exit 2;;
     *) TARGET="$1"; shift;;
   esac
@@ -68,6 +73,21 @@ ask() { # ask <prompt> <default>  -> echoes answer
 yesno() { local a; a="$(ask "$1 [$2] " "$2")"; case "$a" in [Yy]*) return 0;; *) return 1;; esac; }
 
 echo "── harness installer ──  target: $TARGET"
+
+# --- 0. (optional) migrate off a legacy, pre-plugin install ---
+if [ "$DO_MIGRATE" = 1 ]; then
+  . "$BUNDLE/lib/harness_migrate.sh"
+  echo "  scanning for a legacy harness install…"
+  harness_migrate_scan "$TARGET"
+  if harness_migrate_report; then
+    if [ "$MIG_APPLY" = 1 ]; then
+      harness_migrate_apply "$TARGET"
+    else
+      echo "  (dry-run — re-run with --migrate --apply to clean, then install continues)"
+      [ -n "$ASSUME_YES" ] || yesno "  continue with install anyway?" "y" || exit 0
+    fi
+  fi
+fi
 
 # --- 1. stack ---
 if [ -z "$STACK" ] && [ -z "$ASSUME_YES" ]; then

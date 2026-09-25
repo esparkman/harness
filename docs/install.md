@@ -63,6 +63,28 @@ Examples:
 `.claude/harness.json` is written the same way in both and is meant to be **committed** so everyone
 shares the same stack profile and component choices.
 
+## Migrating off a legacy (pre-plugin) install
+
+Repos wired to the harness *before* it was a plugin carry artifacts the plugin now ships — and one
+of them (a committed `settings.json` with a `$HOME`-referencing `hooks` block) is a supply-chain
+footgun. The migrator finds and removes them; it is **dry-run by default** and backs up everything it
+deletes.
+
+```sh
+# report only — changes nothing:
+tools/migrate_legacy.sh /path/to/repo
+# clean it up (backs up removed files under .claude/.harness-migrate-backup-<ts>/):
+tools/migrate_legacy.sh --apply /path/to/repo
+# or fold it into an install in one go:
+./install.sh --migrate --apply --stack rails /path/to/repo
+```
+
+It detects and removes: a committed `hooks` block in `settings.json`/`settings.local.json`, committed
+hook scripts under `.claude/hooks/`, committed reference-shelf / guardrail copies, and **tracked
+symlinked agents** (untracked + gitignored, kept on disk). It verifies the git object mode before
+untracking, so a committed *real* agent file is left alone — only machine-local symlinks are removed.
+An old/unpinned marketplace reference is re-homed and pinned by the install step that follows.
+
 ## Installing the plugin without the script
 
 The installer is a convenience. You can also do it natively:
