@@ -52,6 +52,50 @@ The harness ships **zero agents**. Bring your own — or use an example bundle l
 - **Installer** (`install.sh`) — interactive or flag-driven.
 - **Template** (`templates/global-CLAUDE.md`) — a generic starter ruleset for your config home.
 
+## Installing
+
+Two ways to get the harness. Both give you the same plugin.
+
+### A. From the marketplace (native Claude Code)
+
+Add this repo as a plugin marketplace, then install the plugin:
+
+```sh
+/plugin marketplace add octanelabsdev/harness
+/plugin install harness@harness
+```
+
+Or wire it into a project's `.claude/settings.json` (committed, and **pinned** to a release tag so
+the plugin code can't shift under you):
+
+```jsonc
+{
+  "extraKnownMarketplaces": {
+    "harness": { "source": { "source": "github", "repo": "octanelabsdev/harness", "ref": "v0.1.3" } }
+  },
+  "enabledPlugins": { "harness@harness": true }
+}
+```
+
+> **The plugin alone is inert.** The hooks/gates do nothing until a project has a `.claude/harness.json`
+> (stack profile + which components are on). After a marketplace install, either run `install.sh` to
+> write it, or create it by hand — copy a preset from [`stacks/`](stacks/) under a `"stack"` key and add
+> a `"components"` block (see [docs/configuration.md](docs/configuration.md)).
+
+### B. With the installer (does everything)
+
+The installer sets up the parts the plugin can't — `.claude/harness.json`, pinned plugin enablement,
+`.mcp.json`, `TOMES_DIR` — interactively:
+
+```sh
+git clone https://github.com/octanelabsdev/harness ~/harness
+~/harness/install.sh /path/to/your/project        # interactive: stack + components
+~/harness/install.sh --stack rails --yes .        # non-interactive
+```
+
+Moving a repo off a pre-plugin install? Add `--migrate` (dry-run) / `--migrate --apply` to clean the
+old committed hooks/settings/symlinks first. Full detail: [docs/install.md](docs/install.md).
+
 ## 60-second tour of a configured project
 
 After `install.sh`, your project has:
