@@ -80,7 +80,27 @@ Guidance:
 - **Ground the agent in truth, not memory.** If your stack has a way to query the real project
   (a language server, a schema/route introspector, an MCP server), instruct the agent to use it
   before inferring structure from partial reads.
-- **A reviewer at the end.** Keep a review agent as the final gate before you call work done.
+- **A reviewer at the end.** Keep a review agent as the final gate before you call work done. If you run
+  the **review gate** (`components.review_gate`), your reviewer must fit the blind-review contract below.
+
+### The blind-review contract (for `review_gate`)
+
+When `components.review_gate` is on, the `blind-review` skill drives your project's reviewer and the
+verification gate verifies the result. Your reviewer (BYO — Rails ships `dhh-code-reviewer`) must:
+
+- **Review blind.** It is given only the diff, the review rules, and access to ground truth — never the
+  card, the conversation, or the intent behind the change (that framing is what makes a reviewer
+  rationalize the mistake). It may still read the full files and query ground truth.
+- **Emit structured findings** conforming to `${CLAUDE_PLUGIN_ROOT}/tools/review-findings.schema.json`:
+  a `verdict` (`pass` | `changes-requested`) and `findings[]` with `file`, `line` (a line in the diff),
+  `severity` (`critical` | `improvement`), `category`, `summary`, `failure_scenario`, and `evidence`.
+  The `blind-review` skill records this to `.claude/.review/current.json`.
+- **Cite real diff lines + concrete failure scenarios.** `tools/review_verify.sh` rejects the artifact
+  if its `diff_sha` doesn't match the current tree or a finding cites a line not in the diff — so a
+  hand-written green result can't satisfy the gate. State a clean `pass` plainly; don't invent findings.
+
+A reviewer that doesn't emit the schema still works as a normal review agent; it just can't satisfy the
+automated `review_gate` (which stays opt-in, default off).
 - **Let the harness carry discipline.** You don't need to bake guardrails or verification rules into
   each agent — the guardrails skill and the gates handle that globally. Keep agents focused on their
   domain.

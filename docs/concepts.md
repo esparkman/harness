@@ -82,3 +82,10 @@ The pipeline gate ships in **warn** mode (it advises without ever auto-approving
 with `touch .claude/.pipeline-block` where drift proves costly, and downgrade the verification gate to
 warn-only with `.claude/.verification-warn` while rolling out. The real lever isn't the gate — it's
 making the right path (the PM pipeline) the path of least resistance, so the gate rarely fires.
+
+The **review gate** (opt-in `components.review_gate`) is the judgment layer done honestly: a Stop hook
+can't run a reviewer, so instead of trusting "I reviewed it," it requires a **blind-review artifact** for
+the exact current diff (written by the `blind-review` skill, verified by `tools/review_verify.sh` against
+the diff — a finding must cite a real changed line, so a hand-written green can't pass). Enforce what a
+machine can check (a red test, a stale/absent artifact); let the reviewer's *judgment* be loud and
+human-visible rather than a self-written green stamp.
