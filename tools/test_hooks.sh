@@ -157,5 +157,55 @@ run_stop "$R" true
 [ "$RC" = 0 ] && ok "loop guard: stop_hook_active=true never re-blocks" || no "loop guard: expected exit 0, got $RC"
 rm -rf "$R"
 
+# ---- verification_gate review layer (opt-in via components.review_gate) ----
+echo "verification_gate (review layer):"
+VER="$HERE/review_verify.sh"
+RVBASE='{"components":{"verification_gate":true,"review_gate":true},"stack":{"impl_dirs":["lib"],"ui_dirs":["app"],"operator_test_dir":"test/system","test_command":"true"}}'
+setup_review_repo() { # sets globals R (committed base + impl change) and SHA (canonical diff sha)
+  # NB: call directly, never as $(setup_review_repo) — command substitution would trap R in a subshell.
+  R="$(mkrepo "$RVBASE")"; mkdir -p "$R/.claude/.review"
+  git -C "$R" add -A >/dev/null 2>&1; git -C "$R" commit -qm base >/dev/null 2>&1
+  mkdir -p "$R/lib"; printf 'x = 1\n' > "$R/lib/foo.rb"
+  SHA="$(cd "$R" && bash "$VER" --emit-sha)"
+}
+write_art() { printf '%s' "$2" > "$1/.claude/.review/current.json"; }
+
+# opt-in default OFF: review_gate absent + no artifact -> not enforced (allow)
+R="$(mkrepo '{"components":{"verification_gate":true},"stack":{"impl_dirs":["lib"],"test_command":"true"}}')"; : > "$R/lib/foo.rb"
+run_stop "$R" false
+[ "$RC" = 0 ] && ok "review_gate off (default): not enforced -> stop allowed" || no "review off: expected 0, got $RC"
+rm -rf "$R"
+
+# review_gate on + valid pass artifact -> allow
+setup_review_repo; write_art "$R" "{\"diff_sha\":\"$SHA\",\"verdict\":\"pass\",\"findings\":[]}"
+run_stop "$R" false
+[ "$RC" = 0 ] && ok "review_gate on + valid pass artifact -> stop allowed" || no "review pass: expected 0, got $RC"
+rm -rf "$R"
+
+# review_gate on + no artifact -> block
+setup_review_repo
+run_stop "$R" false
+[ "$RC" = 2 ] && ok "review_gate on + missing artifact -> blocks" || no "review missing: expected 2, got $RC"
+rm -rf "$R"
+
+# review_gate on + changes-requested (critical) -> block
+setup_review_repo; write_art "$R" "{\"diff_sha\":\"$SHA\",\"verdict\":\"changes-requested\",\"findings\":[{\"file\":\"lib/foo.rb\",\"line\":1,\"severity\":\"critical\",\"summary\":\"bug\",\"failure_scenario\":\"crash\"}]}"
+run_stop "$R" false
+[ "$RC" = 2 ] && ok "review_gate on + changes-requested -> blocks" || no "review changes: expected 2, got $RC"
+rm -rf "$R"
+
+# anti-fake: finding cites a line not in the diff -> invalid -> block
+setup_review_repo; write_art "$R" "{\"diff_sha\":\"$SHA\",\"verdict\":\"pass\",\"findings\":[{\"file\":\"lib/foo.rb\",\"line\":999,\"severity\":\"improvement\",\"summary\":\"x\",\"failure_scenario\":\"y\"}]}"
+run_stop "$R" false
+[ "$RC" = 2 ] && ok "review_gate on + finding cites non-diff line -> blocks (anti-fake)" || no "review antifake: expected 2, got $RC"
+rm -rf "$R"
+
+# review_gate on + changes-requested + .verification-warn -> downgrade (allow)
+setup_review_repo; write_art "$R" "{\"diff_sha\":\"$SHA\",\"verdict\":\"changes-requested\",\"findings\":[{\"file\":\"lib/foo.rb\",\"line\":1,\"severity\":\"critical\",\"summary\":\"bug\",\"failure_scenario\":\"crash\"}]}"
+touch "$R/.claude/.verification-warn"
+run_stop "$R" false
+[ "$RC" = 0 ] && ok "review_gate + .verification-warn -> warn only (allow)" || no "review warn: expected 0, got $RC"
+rm -rf "$R"
+
 echo
 if [ "$fail" = 0 ]; then echo "OK: hook tests passed ($pass)."; exit 0; else echo "FAIL: $fail hook test(s), $pass passed." >&2; exit 1; fi

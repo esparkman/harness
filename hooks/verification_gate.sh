@@ -34,6 +34,7 @@ changed="$(git status --porcelain 2>/dev/null || true)"
 
 op_test="$(hcfg '.stack.operator_test_dir' '')"
 test_cmd="$(hcfg '.stack.test_command' '')"
+review_gate="$(hcfg '.components."review_gate"' 'false')"
 impl=""; ui=""; op_changed=""
 while IFS= read -r line; do
   [ -n "$line" ] || continue
@@ -65,6 +66,20 @@ if [ -n "$test_cmd" ]; then
       exit 0
     fi
     exit 2
+  fi
+fi
+
+# Layer 2 (opt-in via components.review_gate) — a blind code review must exist for THIS exact diff,
+# verified against it (not self-reported). review_verify.sh exits 0=pass, 1=changes-requested, 2=stale/missing.
+if [ "$review_gate" = "true" ]; then
+  rv="$HERE/../tools/review_verify.sh"
+  if [ -f "$rv" ] && ! rv_out="$(bash "$rv" 2>&1)"; then
+    { echo "VERIFICATION GATE — code review not satisfied for the current diff:"; printf '%s\n' "$rv_out"; } >&2
+    if [ -f "$repo/.claude/.verification-warn" ]; then
+      echo "(.claude/.verification-warn present — warn-only, not blocking.)" >&2
+    else
+      exit 2
+    fi
   fi
 fi
 

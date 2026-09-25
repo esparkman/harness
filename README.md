@@ -52,7 +52,7 @@ The harness ships **zero agents**. Bring your own — or use an example bundle l
 - **Commands** (`commands/`) — `/harness:init` ((re)configure a project via the installer) and
   `/harness:agents` (bring your stack's agent bundle into `.claude/agents/`).
 - **Skills** (`skills/`) — `guardrails` (6 playbooks: CODE, DEBUG, VERIFY, TRAPS, RUNTIME,
-  MECHANISM), `story-writer`, `product-manager`, `bookshelf`. Model-invoked, stack-agnostic — skills
+  MECHANISM), `story-writer`, `product-manager`, `bookshelf`, `blind-review`. Model-invoked, stack-agnostic — skills
   are **listed, not auto-applied** (availability ≠ activation), so the `skill_nudge` hook prompts the
   model to invoke the matching one on its own trigger instead of waiting for a `/command`.
 - **Stacks** (`stacks/`) — presets: `rails`, `node`, `python`, `go`, `generic` (+ custom).

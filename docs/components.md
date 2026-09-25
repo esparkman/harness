@@ -45,9 +45,13 @@ A `test_command` failure **blocks by default**. Rolling out gradually? `touch .c
 to downgrade to warn-only (the failure is surfaced but doesn't block). A Stop hook's `exit 2` prevents
 the stop and continues so Claude addresses the gap.
 
-> The old `.claude/.last-review` "was it reviewed?" check was removed — it compared a model-written
-> marker to HEAD and couldn't tell a real review from a claimed one. A real review gate returns backed
-> by a reviewer artifact (roadmap phase 3).
+**Review layer (`components.review_gate`, opt-in, default off).** When on, the same Stop hook also
+requires a **verified blind-review artifact** for the current diff: the `blind-review` skill writes
+`.claude/.review/current.json`, and `tools/review_verify.sh` refuses it unless its `diff_sha` matches
+the current tree and every finding cites a `file:line` actually in the diff (so a hand-written green
+result can't satisfy it). `verdict: changes-requested` or a missing/stale artifact **blocks**;
+`.claude/.verification-warn` downgrades it. This replaces the old `.claude/.last-review` check, which
+compared a model-written marker to HEAD and couldn't tell a real review from a claimed one.
 
 ### Pipeline gate (`pipeline_gate`) — PreToolUse hook
 Before an `Edit`/`Write` to the implementation surface (`impl_dirs`), it requires either:
@@ -108,6 +112,14 @@ Books are **BYO and never shipped** (copyright); point the reader at your shelf 
 unset and the fallback shelves are empty, or a book isn't found, the skill says so and falls back to
 live docs or an explicit "unverified" label — it never blocks and never invents a book's contents.
 Agents can invoke this skill too (see [agents.md](agents.md) → the bookshelf directive).
+
+### `blind-review`
+Produces an independent, **blind** review of the current diff and writes the findings artifact the
+verification gate's review layer checks (`.claude/.review/current.json`). Blind = the reviewer sees the
+diff, the rules, and ground-truth, but **not** the card/conversation/intent that produced the code —
+the framing that would prime it to rationalize the mistake. It delegates to your project's reviewer
+(BYO; Rails → `dhh-code-reviewer`), then records structured findings that `tools/review_verify.sh`
+re-checks against the diff. Load it when `review_gate` is on, or any time you want a verified review.
 
 ## How they fit together
 

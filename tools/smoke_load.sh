@@ -81,8 +81,8 @@ fi
 # Hooks are counted per EVENT (SessionStart, Stop, PreToolUse), not per script —
 # adding a script under an existing event does not change this number.
 printf '%s' "$det" | grep -q "Hooks (3)"  && ok "3 hook events present"  || bad "expected 3 hook events in inventory"
-# 6 invocable items: 4 skills (bookshelf, guardrails, product-manager, story-writer) + 2 commands (init, agents).
-printf '%s' "$det" | grep -q "Skills (6)" && ok "6 skills + commands present" || bad "expected 6 skills+commands in inventory"
+# 7 invocable items: 5 skills (blind-review, bookshelf, guardrails, product-manager, story-writer) + 2 commands (init, agents).
+printf '%s' "$det" | grep -q "Skills (7)" && ok "7 skills + commands present" || bad "expected 7 skills+commands in inventory"
 printf '%s' "$det" | grep -qw "init" && printf '%s' "$det" | grep -qw "agents" && ok "/harness:init and /harness:agents commands loaded" || bad "expected init + agents commands in inventory"
 
 if [ "$fail" = 0 ]; then echo "OK: plugin installs and loads clean."; else echo "FAIL: load smoke." >&2; fi
