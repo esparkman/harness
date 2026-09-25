@@ -78,7 +78,8 @@ if printf '%s' "$det" | grep -qiE "error|failed|not found|duplicate"; then
 else
   ok "installed and loaded clean"
 fi
-printf '%s' "$det" | grep -q "Hooks (3)"  && ok "3 hooks present"  || bad "expected 3 hooks in inventory"
+printf '%s' "$det" | grep -q "Hooks (4)"  && ok "4 hooks present"  || bad "expected 4 hooks in inventory"
+printf '%s' "$det" | grep -q "UserPromptSubmit" && ok "UserPromptSubmit (skill nudge) wired" || bad "expected UserPromptSubmit event in inventory"
 printf '%s' "$det" | grep -q "Skills (4)" && ok "4 skills present" || bad "expected 4 skills in inventory"
 
 if [ "$fail" = 0 ]; then echo "OK: plugin installs and loads clean."; else echo "FAIL: load smoke." >&2; fi

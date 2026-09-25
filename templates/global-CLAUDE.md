@@ -18,6 +18,17 @@ The harness plugin's SessionStart hook prints an environment-verified banner (ac
 home's global ruleset, harness config + stack, and your Bring-Your-Own agent count). Trust that
 banner over memory. If it says `harness: NOT configured`, run the installer for this project.
 
+## Skills auto-engage — availability ≠ activation
+The harness skills are **listed, not auto-applied**. At session start they're only registered; a
+skill's instructions take effect only once you invoke it. So invoke the matching skill **on your own**
+the moment its trigger fires — do not wait for the operator to type `/harness:<name>`:
+- **guardrails** — before your first file edit, on a failed command/test, before claiming
+  done/passing/complete or committing, or when touching a language trap.
+- **story-writer** — when creating or refining a work item / ticket / story before implementation.
+- **product-manager** — when deciding what to work on next, triaging a backlog, or routing ready work.
+The `skill_nudge` hook reminds you of this each turn; the reminder is the floor, not the trigger —
+reach for the skill as soon as the work matches it.
+
 ## Sub-agent delegation (Bring-Your-Own agents)
 The harness ships **no** agents — you bring your own in `.claude/agents/`. When agents are
 present, route domain work to the agent that owns it rather than doing it inline, and follow the

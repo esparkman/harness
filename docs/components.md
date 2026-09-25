@@ -1,6 +1,6 @@
 # Components: hooks & skills
 
-The harness ships three **hooks** (run by the environment) and three **skills** (invoked by the
+The harness ships four **hooks** (run by the environment) and four **skills** (invoked by the
 model). Hooks are toggled per project in `.claude/harness.json`; skills come with the plugin.
 
 ## Hooks
@@ -9,6 +9,19 @@ model). Hooks are toggled per project in `.claude/harness.json`; skills come wit
 Prints an environment-verified status line at the start of every session — the active config home's
 global ruleset, the harness config + stack, and your BYO agent count. Its whole point is to report
 *reality* rather than what the model remembers. Shown unless `components.session_banner` is `false`.
+
+### Skill nudge (`skill_nudge`) — SessionStart + UserPromptSubmit hook
+Skills are **listed, not auto-applied**: at session start Claude Code registers them (availability),
+but a skill's instructions only take effect once it's invoked (activation). Without a prompt the
+operator has to type `/harness:<name>` before a skill shapes the response. This hook injects a
+directive so the model invokes the right skill *on its own* the moment a trigger fires — `guardrails`
+(before a first edit / on a failed command / before claiming done), `product-manager` (deciding
+what's next / triaging / routing ready work), `story-writer` (writing or refining a story). It changes
+model behavior only; a hook cannot call a skill itself.
+
+Fires on two events for durability: the **full** directive once at `SessionStart`, and a **terse**
+one-line reminder on each `UserPromptSubmit` so the trigger stays fresh in a long session. Shown
+unless `components.skill_nudge` is `false`.
 
 ### Verification gate (`verification_gate`) — Stop hook
 When a turn ends with implementation code changed (per `impl_dirs`), it warns if:
@@ -36,8 +49,11 @@ Tests, config, docs, and `.claude/` are never gated. **Warn** by default (allows
 
 ## Skills
 
-Skills auto-load when their description matches the work; they're stack-agnostic and come with the
-plugin (no per-project toggle).
+Skills come with the plugin (no per-project toggle) and are stack-agnostic. They are **listed, not
+auto-applied** — Claude Code registers each skill's name + description at session start, but a skill's
+instructions only take effect when it's invoked (via the `Skill` tool or a `/harness:<name>` command).
+The `skill_nudge` hook (above) is what makes the model reach for the matching skill on its own instead
+of waiting to be asked.
 
 ### `guardrails`
 A routing table plus six reference playbooks. Read the one whose trigger just fired; cite a fired
@@ -69,6 +85,15 @@ authority (triage, move, tag, pin, assign, comment — never delete).
 `fizzy_*` read/act tools, with the delete operations withheld by design). It's a default, not a
 requirement — point the operations at whatever tracker MCP your project uses, or run the pipeline
 against a file-backed backlog (`stories/` + `.claude/.current-story`) with no tracker at all.
+
+### `bookshelf`
+Reads your own reference books (EPUBs) in place via `${CLAUDE_PLUGIN_ROOT}/tools/tome.sh`, so a
+design/idiom/convention call can be grounded in — and quote — a primary source instead of memory.
+Books are **BYO and never shipped** (copyright); point the reader at your shelf with `TOMES_DIR`
+(the installer's user step can set it). **Fails gracefully when no shelf exists:** if `TOMES_DIR` is
+unset and the fallback shelves are empty, or a book isn't found, the skill says so and falls back to
+live docs or an explicit "unverified" label — it never blocks and never invents a book's contents.
+Agents can invoke this skill too (see [agents.md](agents.md) → the bookshelf directive).
 
 ## How they fit together
 

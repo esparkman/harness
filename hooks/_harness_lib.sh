@@ -29,11 +29,14 @@ harness_cfg() {
 }
 
 # jq read with a default. Usage: hcfg '.stack.test_command' 'bin/rails test'
+# Note: we do NOT use jq's `//` operator — it treats a literal `false` as empty, which would make a
+# `components.<x>: false` toggle silently fall back to its default. Read the value raw and treat only
+# jq's `null` (missing key) and the empty string as "absent → use default"; `false` is preserved.
 hcfg() {
   local cfg; cfg="$(harness_cfg)"
   if [ -z "$cfg" ]; then printf '%s' "${2:-}"; return; fi
-  local v; v="$(jq -r "${1} // empty" "$cfg" 2>/dev/null)"
-  if [ -n "$v" ]; then printf '%s' "$v"; else printf '%s' "${2:-}"; fi
+  local v; v="$(jq -r "${1}" "$cfg" 2>/dev/null)"
+  if [ -n "$v" ] && [ "$v" != "null" ]; then printf '%s' "$v"; else printf '%s' "${2:-}"; fi
 }
 
 # Component toggle. Enforcing gates default OFF when unconfigured (safe/inert).

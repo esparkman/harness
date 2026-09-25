@@ -82,6 +82,38 @@ mechanisms — both wired by the installer, neither hard-coded to a `$HOME` path
 > These are *distinct*: the MCP server + guides cover the framework's current surface; the EPUB shelf
 > covers deeper design/idiom references. Both are optional and BYO-populated.
 
+### Pointing an agent at the bookshelf
+
+To have an agent ground its convention/idiom calls in your reference books, give it the `Skill` tool
+and drop this directive into the agent's body. It **fails gracefully** — an empty or unset shelf never
+blocks the agent:
+
+```markdown
+---
+name: my-domain-expert
+description: What this agent owns and when to use it.
+model: sonnet
+tools: Read, Write, Edit, Grep, Glob, Bash, Skill   # Skill is required to invoke the bookshelf
+---
+
+# My Domain Expert
+…
+
+## Grounding conventions in primary sources
+Before asserting a language/framework convention, an OO/refactoring call, a testing approach, or a
+database behavior, consult the **bookshelf** skill and quote the source line you rely on:
+invoke `harness:bookshelf` (or run `${CLAUDE_PLUGIN_ROOT}/tools/tome.sh`).
+If the shelf is empty or the book isn't there, say so and fall back to the framework's live docs or an
+explicit "unverified" label — never block on it and never invent a book's contents.
+```
+
+Notes:
+- **`Skill` in `tools:` is required** for the agent to invoke a plugin skill; without it, the agent
+  can still call the reader directly over Bash (`${CLAUDE_PLUGIN_ROOT}/tools/tome.sh`).
+- The graceful-fallback line is not optional boilerplate — it's what keeps a missing/empty `TOMES_DIR`
+  from turning grounding into a hard stop. `tome.sh` itself falls back to common shelves and reports a
+  miss rather than erroring.
+
 ## The delegation map
 
 Where you enforce "always delegate to an agent," put it in your global ruleset
