@@ -37,6 +37,9 @@ Run with no flags and it prompts for:
   --components LIST      comma list of: session_banner,verification_gate,pipeline_gate  (default: all)
   --local               enablement/config in settings.local.json (just you) instead of committed settings.json
   --no-plugin           only write .claude/harness.json; don't touch settings
+  --ref REF             pin the marketplace to this tag/branch (default: v<plugin.json version>)
+  --sha SHA             also pin this exact commit — ref+sha is the strongest pin
+  --no-sha              don't auto-resolve a commit sha for a version-tag ref (ref only)
   --global              also install the generic global-CLAUDE.md into your config home
   --yes, -y             accept defaults, no prompts
 ```
@@ -121,10 +124,27 @@ Two commands ship with the plugin:
 
 ## Updating
 
-The plugin auto-updates from the marketplace by default. Force a check with
-`/plugin marketplace update harness`, or pin behavior with the standard Claude Code env vars
-(`DISABLE_AUTOUPDATER`, `FORCE_AUTOUPDATE_PLUGINS`). To change your stack/components later, re-run
-`install.sh` (it merges, preserving other settings keys) or edit `.claude/harness.json` directly.
+**Stack / components.** Re-run `install.sh` (it merges, preserving your other settings keys) or edit
+`.claude/harness.json` directly.
+
+**The pinned plugin version.** The harness is a *third-party* marketplace, so Claude Code does **not**
+auto-update it, and a tag pin doesn't move on its own — that's the point (a moving ref would let any
+push to the harness repo run on every machine at next session). Bumping from, say, `v0.1.5` to
+`v0.1.6` means changing the pinned `ref` in `.claude/settings.json`. No Claude-Code-native command
+does that (`/plugin marketplace update` only refreshes the cached catalog; `claude plugin update`
+doesn't touch the `ref`). So don't hand-edit — **re-run the installer, which re-pins for you:**
+
+```sh
+~/harness/install.sh --ref v0.1.6 --yes .     # rewrites settings.json to the new tag (+ its sha)
+# across a fleet:
+for r in ~/dev/*; do ~/harness/install.sh --ref v0.1.6 --yes "$r"; done
+```
+
+**Strongest pin (ref + sha).** For a version-tag ref the installer also resolves and pins the tag's
+immutable **commit sha** (`--no-sha` opts out; `--sha SHA` sets it explicitly). `ref + sha` means even
+a deleted or re-cut tag upstream can't swap the code under you — the most secure of the three options
+Claude Code documents (ref+sha > tag > branch). A branch/channel ref (`main`, `stable`) is left at
+ref-only so it can still move.
 
 ## Uninstalling
 
