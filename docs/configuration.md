@@ -55,7 +55,7 @@ Paths are directory prefixes, repo-relative — not globs. `app` matches `app/mo
 
 ## Stack presets
 
-Presets live in [`stacks/`](../stacks) and are the `stack` object above:
+Presets live in [`stacks/`](https://github.com/octanelabsdev/harness/tree/main/stacks) and are the `stack` object above:
 
 | Preset | impl_dirs | operator_test_dir | test_command |
 |---|---|---|---|

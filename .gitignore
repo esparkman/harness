@@ -7,3 +7,5 @@
 
 # Local test scratch (isolated install/config used to smoke-test the harness)
 /.test-projects/
+site/
+.venv-docs/
