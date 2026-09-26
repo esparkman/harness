@@ -142,6 +142,8 @@ HARNESS CHECK (SessionStart hook — environment-verified, not model memory):
 
 ## Documentation
 
+📖 **Full manual: [harness.octanelabs.dev](https://harness.octanelabs.dev/)** — the docs below, rendered and searchable.
+
 - **[docs/concepts.md](docs/concepts.md)** — the architecture, the plugin+config split, the security model.
 - **[docs/install.md](docs/install.md)** — install in depth: interactive, flags, scopes, CI, updating, uninstalling.
 - **[docs/configuration.md](docs/configuration.md)** — `.claude/harness.json`, components, stack profiles (presets + custom).
